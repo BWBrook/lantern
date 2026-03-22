@@ -1,32 +1,8 @@
 import { describeRoom, getRoomById } from "../adventure";
+import { describeNavigation, getExitBlockReason } from "../navigation";
 import { runAdventureHook } from "../rules/hooks";
-import { hasLightForRoom } from "../rules/visibility";
-import { hasFlag, isItemOpen, setCurrentRoom } from "../state";
+import { setCurrentRoom } from "../state";
 import type { AdventureDefinition, GameState, ResolvedIntent, TurnResult } from "../types";
-
-function canUseExit(
-  adventure: AdventureDefinition,
-  state: GameState,
-  exit: ReturnType<typeof getRoomById>["exits"][number]
-): string | undefined {
-  if (exit.requiredFlags?.some((flagId) => !hasFlag(state, flagId))) {
-    return exit.blockedMessage ?? "That way is still blocked.";
-  }
-
-  if (exit.hiddenUnlessFlags?.some((flagId) => !hasFlag(state, flagId))) {
-    return exit.blockedMessage ?? "That way is not available yet.";
-  }
-
-  if (exit.requiresOpenItemId && !isItemOpen(adventure, state, exit.requiresOpenItemId)) {
-    return exit.blockedMessage ?? "Something still blocks the way.";
-  }
-
-  if (!hasLightForRoom(adventure, state, exit.targetRoomId)) {
-    return "It is too dark to risk going farther without a proper light.";
-  }
-
-  return undefined;
-}
 
 export function handleGo(
   adventure: AdventureDefinition,
@@ -48,22 +24,27 @@ export function handleGo(
   if (!exit) {
     return {
       state,
-      messages: ["That direction is not open from here."]
+      messages: [`You cannot go ${direction} from here.`, ...describeNavigation(adventure, state)]
     };
   }
 
-  const blockedMessage = canUseExit(adventure, state, exit);
+  const blockedMessage = getExitBlockReason(adventure, state, exit);
 
   if (blockedMessage) {
     return {
       state,
-      messages: [blockedMessage]
+      messages: [blockedMessage, ...describeNavigation(adventure, state)]
     };
   }
 
   let nextState = setCurrentRoom(state, exit.targetRoomId);
-  const messages: string[] = [describeRoom(adventure, nextState)];
-  const enteredRoom = getRoomById(adventure, nextState.currentRoomId);
+  const enteredRoomView = getRoomById(adventure, nextState.currentRoomId);
+  const messages: string[] = [
+    enteredRoomView.title,
+    describeRoom(adventure, nextState),
+    ...describeNavigation(adventure, nextState)
+  ];
+  const enteredRoom = enteredRoomView;
 
   if (enteredRoom.enterHookId) {
     const hookResult = runAdventureHook(adventure, enteredRoom.enterHookId, nextState, intent);

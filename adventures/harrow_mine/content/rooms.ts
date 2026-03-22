@@ -25,7 +25,7 @@ export const rooms: AdventureRoom[] = [
       first:
         "The old mine road is mostly ruts, gorse, and memory. Town lies west. East, the loading yard hunches under the hill. A broken milestone has stayed on the job longer than the mine did.",
       repeat:
-        "The muddy road runs west to town and east to the loading yard."
+        "The muddy mine road still runs west to town and east to the loading yard, with the broken milestone keeping its lonely watch beside the track."
     },
     exits: [
       { direction: "west", targetRoomId: "town_edge" },

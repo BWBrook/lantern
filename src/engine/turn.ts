@@ -3,6 +3,7 @@ import { handleSwitchActor } from "./actions/actors";
 import { handleInventory, handleDrop, handleTake } from "./actions/inventory";
 import { handleGo } from "./actions/movement";
 import { handleObjectAction } from "./actions/objects";
+import { describeNavigation } from "./navigation";
 import { parseCommand } from "./parser/parse";
 import { resolveIntent } from "./parser/resolve";
 import { loadGame, saveGame } from "./save/storage";
@@ -32,6 +33,15 @@ function finalize(actionResult: TurnResult): TurnResult {
   return withMessages(actionResult.state, actionResult.messages);
 }
 
+function roomEntryMessages(
+  adventure: AdventureDefinition,
+  state: GameState
+): string[] {
+  const room = getRoomById(adventure, state.currentRoomId);
+
+  return [room.title, describeRoom(adventure, state), ...describeNavigation(adventure, state)];
+}
+
 export function createInitialTranscriptState(adventure: AdventureDefinition): GameState {
   let state = createInitialGameState(adventure);
   const room = getRoomById(adventure, state.currentRoomId);
@@ -49,7 +59,10 @@ export function createInitialTranscriptState(adventure: AdventureDefinition): Ga
     "system",
     `${adventure.metadata.title} is loaded into the Lantern host.`
   );
-  state = appendTranscript(state, "system", room.descriptions.first);
+
+  for (const message of roomEntryMessages(adventure, state)) {
+    state = appendTranscript(state, "system", message);
+  }
 
   return state;
 }
@@ -101,7 +114,7 @@ export function runTurn(
           });
           return finalize(actionResult);
         }
-        return withMessages(nextState, [describeRoom(adventure, nextState)]);
+        return withMessages(nextState, roomEntryMessages(adventure, nextState));
       case "INVENTORY":
         return finalize(handleInventory(adventure, nextState));
       case "GO":

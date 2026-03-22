@@ -59,4 +59,15 @@ describe("parser v1", () => {
       verb: "SWITCH_ACTOR"
     });
   });
+
+  it("parses bare actor names as switching commands", () => {
+    expect(resolve("NESSA")).toEqual({
+      actorId: "nessa",
+      directObjectId: "nessa",
+      indirectObjectId: undefined,
+      preposition: undefined,
+      raw: "nessa",
+      verb: "SWITCH_ACTOR"
+    });
+  });
 });

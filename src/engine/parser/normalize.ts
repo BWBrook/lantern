@@ -111,6 +111,19 @@ export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon):
     throw new Error("Incomplete command.");
   }
 
+  const soleToken = working[0];
+
+  if (working.length === 1 && soleToken && lexicon.actorAliases[soleToken]) {
+    return {
+      verb: "SWITCH_ACTOR",
+      actorId: undefined,
+      directObject: soleToken,
+      indirectObject: undefined,
+      preposition: undefined,
+      raw
+    };
+  }
+
   const commandHead = working[0];
 
   if (!commandHead) {
