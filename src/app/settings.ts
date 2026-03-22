@@ -1,0 +1,2 @@
+export const INTERNAL_SCENE_WIDTH = 384;
+export const INTERNAL_SCENE_HEIGHT = 240;
