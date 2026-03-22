@@ -1,109 +1,144 @@
-import { appendTranscript, getRoomById } from "./adventure";
+import { appendTranscript, describeRoom, getActorById, getArtLabel, getRoomById } from "./adventure";
+import { handleSwitchActor } from "./actions/actors";
+import { handleInventory, handleDrop, handleTake } from "./actions/inventory";
+import { handleGo } from "./actions/movement";
+import { handleObjectAction } from "./actions/objects";
 import { parseCommand } from "./parser/parse";
 import { resolveIntent } from "./parser/resolve";
-import type { AdventureDefinition, GameState, TurnResult } from "./types";
+import { loadGame, saveGame } from "./save/storage";
+import { createInitialGameState } from "./state";
+import type {
+  AdventureDefinition,
+  GameState,
+  RoomViewModel,
+  StorageLike,
+  TurnResult
+} from "./types";
 
-function describeRoom(
-  adventure: AdventureDefinition,
-  state: GameState
-): string {
-  const room = getRoomById(adventure, state.currentRoomId);
-  const visits = state.visitCounts[state.currentRoomId] ?? 0;
+function withMessages(state: GameState, messages: string[]): TurnResult {
+  let nextState = state;
 
-  return visits === 0 ? room.descriptions.first : room.descriptions.repeat;
-}
-
-function enterRoom(
-  adventure: AdventureDefinition,
-  state: GameState,
-  roomId: string
-): TurnResult {
-  const nextState = {
-    ...state,
-    currentRoomId: roomId,
-    visitCounts: {
-      ...state.visitCounts,
-      [roomId]: (state.visitCounts[roomId] ?? 0) + 1
-    }
-  };
+  for (const message of messages) {
+    nextState = appendTranscript(nextState, "system", message);
+  }
 
   return {
     state: nextState,
-    messages: [describeRoom(adventure, nextState)]
+    messages
   };
 }
 
-export function runBootstrapTurn(
+function finalize(actionResult: TurnResult): TurnResult {
+  return withMessages(actionResult.state, actionResult.messages);
+}
+
+export function createInitialTranscriptState(adventure: AdventureDefinition): GameState {
+  let state = createInitialGameState(adventure);
+  const room = getRoomById(adventure, state.currentRoomId);
+
+  state = {
+    ...state,
+    visitCounts: {
+      ...state.visitCounts,
+      [room.id]: 1
+    }
+  };
+
+  state = appendTranscript(
+    state,
+    "system",
+    `${adventure.metadata.title} is loaded into the Lantern host.`
+  );
+  state = appendTranscript(state, "system", room.descriptions.first);
+
+  return state;
+}
+
+export function createRoomViewModel(
   adventure: AdventureDefinition,
-  state: GameState,
-  rawCommand: string
-): TurnResult {
-  const command = rawCommand.trim().toLowerCase();
-
-  if (!command) {
-    return {
-      state,
-      messages: ["Lantern is listening."]
-    };
-  }
-
-  try {
-    const intent = resolveIntent(adventure, parseCommand(command, adventure.lexicon));
-
-    if (intent.verb === "LOOK") {
-      return {
-        state,
-        messages: [describeRoom(adventure, state)]
-      };
-    }
-
-    if (intent.verb === "INVENTORY") {
-      return {
-        state,
-        messages: [
-          state.inventory.length === 0
-            ? "You are carrying nothing yet."
-            : `You are carrying: ${state.inventory.join(", ")}.`
-        ]
-      };
-    }
-
-    if (intent.verb === "SWITCH_ACTOR" && intent.actorId) {
-      return {
-        state: {
-          ...state,
-          activeActorId: intent.actorId
-        },
-        messages: [`You shift perspective to ${intent.actorId}.`]
-      };
-    }
-
-    if (intent.verb === "GO" && intent.directObject) {
-      const room = getRoomById(adventure, state.currentRoomId);
-      const exit = room.exits.find((candidate) => candidate.direction === intent.directObject);
-
-      if (!exit) {
-        return {
-          state,
-          messages: ["That direction is not open from here."]
-        };
-      }
-
-      return enterRoom(adventure, state, exit.targetRoomId);
-    }
-  } catch {
-    return {
-      state,
-      messages: ["I couldn't make sense of that yet."]
-    };
-  }
+  state: GameState
+): RoomViewModel {
+  const room = getRoomById(adventure, state.currentRoomId);
+  const actor = getActorById(adventure, state.activeActorId);
+  const lampState =
+    adventure.rules?.lightFlagId && state.flags.includes(adventure.rules.lightFlagId)
+      ? "Lamp lit"
+      : "Lamp dark";
 
   return {
-    state: appendTranscript(
-      state,
-      "system",
-      "The full parser is not wired in yet. Try LOOK, INVENTORY, or a compass direction."
-    ),
-    messages: ["The full parser is not wired in yet. Try LOOK, INVENTORY, or a compass direction."]
+    adventureTitle: adventure.metadata.title,
+    roomTitle: room.title,
+    artLabel: getArtLabel(adventure, room.artId),
+    actorName: actor.name,
+    objective: adventure.content.objective,
+    lampState
   };
+}
+
+export function runTurn(
+  adventure: AdventureDefinition,
+  state: GameState,
+  rawCommand: string,
+  storage: StorageLike | undefined
+): TurnResult {
+  const trimmed = rawCommand.trim();
+
+  if (!trimmed) {
+    return withMessages(state, ["Lantern is listening."]);
+  }
+
+  let nextState = appendTranscript(state, "player", trimmed);
+
+  try {
+    const intent = resolveIntent(adventure, nextState, parseCommand(trimmed, adventure.lexicon));
+
+    switch (intent.verb) {
+      case "LOOK":
+        if (intent.directObjectId) {
+          const actionResult = handleObjectAction(adventure, nextState, {
+            ...intent,
+            verb: "EXAMINE"
+          });
+          return finalize(actionResult);
+        }
+        return withMessages(nextState, [describeRoom(adventure, nextState)]);
+      case "INVENTORY":
+        return finalize(handleInventory(adventure, nextState));
+      case "GO":
+        return finalize(handleGo(adventure, nextState, intent));
+      case "TAKE":
+        return finalize(handleTake(adventure, nextState, intent));
+      case "DROP":
+        return finalize(handleDrop(adventure, nextState, intent));
+      case "SWITCH_ACTOR":
+        return finalize(handleSwitchActor(adventure, nextState, intent));
+      case "SAVE":
+        if (!storage) {
+          return withMessages(nextState, ["Save storage is not available in this environment."]);
+        }
+        saveGame(storage, adventure, nextState);
+        return withMessages(nextState, ["Progress saved."]);
+      case "LOAD": {
+        if (!storage) {
+          return withMessages(nextState, ["Save storage is not available in this environment."]);
+        }
+
+        const loadedState = loadGame(storage, adventure);
+
+        if (!loadedState) {
+          return withMessages(nextState, ["There is no saved game yet."]);
+        }
+
+        return withMessages(loadedState, ["Progress restored."]);
+      }
+      default: {
+        const actionResult = handleObjectAction(adventure, nextState, intent);
+        return finalize(actionResult);
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Something went wrong.";
+
+    return withMessages(nextState, [message]);
+  }
 }

@@ -20,6 +20,9 @@ const harrowMineAdventure: AdventureDefinition = {
   metadata,
   theme,
   lexicon,
+  rules: {
+    lightFlagId: "lamp_lit"
+  },
   content: {
     objective,
     rooms,

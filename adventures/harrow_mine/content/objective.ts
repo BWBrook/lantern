@@ -1,2 +1,2 @@
 export const objective =
-  "Reach the abandoned mine, gather what you can, and get Bram and Nessa ready for the deeper lockbox run.";
+  "Recover the paymaster's lockbox from the assay office and get back out to the road.";

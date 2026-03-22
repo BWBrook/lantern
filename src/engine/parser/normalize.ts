@@ -1,12 +1,15 @@
-import type { AdventureLexicon, CanonicalVerb, Direction } from "../types";
+import type { AdventureLexicon, CanonicalVerb, Direction, Intent } from "../types";
 
 const ARTICLES = new Set(["a", "an", "the"]);
 const PREPOSITIONS = new Set(["with", "using", "at", "in", "into", "on", "from", "to", "through"]);
 
 const BASE_VERB_ALIASES: Record<string, CanonicalVerb> = {
+  attach: "ATTACH",
   be: "SWITCH_ACTOR",
   close: "CLOSE",
+  cross: "CROSS",
   drop: "DROP",
+  examine: "EXAMINE",
   extinguish: "EXTINGUISH",
   go: "GO",
   help: "HELP",
@@ -18,9 +21,12 @@ const BASE_VERB_ALIASES: Record<string, CanonicalVerb> = {
   open: "OPEN",
   pick: "UNLOCK",
   pry: "MOVE",
+  pull: "PULL",
+  push: "PUSH",
   save: "SAVE",
   search: "SEARCH",
   take: "TAKE",
+  turn: "TURN",
   unlock: "UNLOCK",
   use: "USE",
   wait: "WAIT"
@@ -37,18 +43,8 @@ const BASE_DIRECTION_ALIASES: Record<string, Direction> = {
   west: "west"
 };
 
-export interface NormalizedCommand {
-  actorAlias: string | undefined;
-  direction: Direction | undefined;
-  directObjectTokens: string[];
-  indirectObjectTokens: string[];
-  preposition: string | undefined;
-  raw: string;
-  verb: CanonicalVerb | undefined;
-}
-
-export function isPreposition(token: string): boolean {
-  return PREPOSITIONS.has(token);
+function stripArticles(tokens: string[]): string[] {
+  return tokens.filter((token) => !ARTICLES.has(token));
 }
 
 function normalizeVerb(token: string, lexicon: AdventureLexicon): CanonicalVerb | undefined {
@@ -61,82 +57,106 @@ function normalizeDirection(token: string, lexicon: AdventureLexicon): Direction
   return lexicon.directionAliases[token] ?? BASE_DIRECTION_ALIASES[token];
 }
 
-export function normalizeTokens(
-  tokens: string[],
-  lexicon: AdventureLexicon
-): NormalizedCommand {
-  const articleFiltered = tokens.filter((token) => !ARTICLES.has(token));
+function splitPreposition(tokens: string[]): {
+  direct: string[];
+  indirect: string[];
+  preposition: string | undefined;
+} {
+  const index = tokens.findIndex((token) => PREPOSITIONS.has(token));
 
-  if (articleFiltered.length === 0) {
+  if (index === -1) {
     return {
-      actorAlias: undefined,
-      direction: undefined,
-      directObjectTokens: [],
-      indirectObjectTokens: [],
-      preposition: undefined,
-      raw: "",
-      verb: undefined
+      direct: tokens,
+      indirect: [],
+      preposition: undefined
     };
   }
 
-  let actorAlias: string | undefined;
-  let working = [...articleFiltered];
+  return {
+    direct: tokens.slice(0, index),
+    indirect: tokens.slice(index + 1),
+    preposition: tokens[index]
+  };
+}
+
+export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon): Intent {
+  const tokens = stripArticles(rawTokens);
+
+  if (tokens.length === 0) {
+    throw new Error("Empty command.");
+  }
+
+  let actorId: string | undefined;
+  let working = [...tokens];
   const firstToken = working[0];
   const secondToken = working[1];
   const thirdToken = working[2];
 
   if (firstToken && secondToken === "," && lexicon.actorAliases[firstToken]) {
-    actorAlias = firstToken;
+    actorId = lexicon.actorAliases[firstToken];
     working = working.slice(2);
   } else if (
     firstToken === "tell" &&
     secondToken &&
-    thirdToken === "to" &&
-    lexicon.actorAliases[secondToken]
+    lexicon.actorAliases[secondToken] &&
+    thirdToken === "to"
   ) {
-    actorAlias = secondToken;
+    actorId = lexicon.actorAliases[secondToken];
     working = working.slice(3);
   }
 
   const raw = working.join(" ");
-  const verbToken = working[0];
-  const standaloneDirection = verbToken ? normalizeDirection(verbToken, lexicon) : undefined;
 
-  if (standaloneDirection) {
+  if (working.length === 0) {
+    throw new Error("Incomplete command.");
+  }
+
+  const commandHead = working[0];
+
+  if (!commandHead) {
+    throw new Error("Incomplete command.");
+  }
+
+  const direction = normalizeDirection(commandHead, lexicon);
+
+  if (direction) {
     return {
-      actorAlias,
-      direction: standaloneDirection,
-      directObjectTokens: [standaloneDirection],
-      indirectObjectTokens: [],
+      verb: "GO",
+      actorId,
+      directObject: direction,
+      indirectObject: undefined,
       preposition: undefined,
-      raw,
-      verb: "GO"
+      raw
     };
   }
 
-  const verb = verbToken ? normalizeVerb(verbToken, lexicon) : undefined;
+  const verb = normalizeVerb(commandHead, lexicon);
+
+  if (!verb) {
+    throw new Error(`Unknown verb "${commandHead}".`);
+  }
+
   const remainder = working.slice(1);
-  const prepositionIndex = remainder.findIndex((token) => isPreposition(token));
 
-  if (prepositionIndex === -1) {
+  if (verb === "SWITCH_ACTOR") {
     return {
-      actorAlias,
-      direction: undefined,
-      directObjectTokens: remainder,
-      indirectObjectTokens: [],
+      verb,
+      actorId: undefined,
+      directObject: remainder.join(" ") || undefined,
+      indirectObject: undefined,
       preposition: undefined,
-      raw,
-      verb
+      raw
     };
   }
+
+  const split = splitPreposition(remainder);
 
   return {
-    actorAlias,
-    direction: undefined,
-    directObjectTokens: remainder.slice(0, prepositionIndex),
-    indirectObjectTokens: remainder.slice(prepositionIndex + 1),
-    preposition: remainder[prepositionIndex],
-    raw,
-    verb
+    verb,
+    actorId,
+    directObject: split.direct.join(" ") || undefined,
+    indirectObject: split.indirect.join(" ") || undefined,
+    preposition: split.preposition,
+    raw
   };
 }

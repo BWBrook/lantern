@@ -16,15 +16,13 @@ export const lexicon: AdventureLexicon = {
     west: "west"
   },
   nounAliases: {
-    bar: "crowbar",
-    crowbar: "crowbar",
-    mine: "harrow_mine",
-    road: "mine_road",
-    yard: "loading_yard"
+    lantern: "lamp",
+    key: "brass_key"
   },
   verbAliases: {
     get: "take",
-    inspect: "look",
-    l: "look"
+    inspect: "examine",
+    l: "look",
+    x: "examine"
   }
 };

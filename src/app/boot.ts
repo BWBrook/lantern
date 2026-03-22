@@ -2,11 +2,9 @@ import Phaser from "phaser";
 import { eventBus } from "./event-bus";
 import { INTERNAL_SCENE_HEIGHT, INTERNAL_SCENE_WIDTH } from "./settings";
 import { loadActiveAdventure } from "./load-adventure";
-import { appendTranscript, getArtLabel, getRoomById } from "../engine/adventure";
-import { createInitialGameState } from "../engine/state";
-import { runBootstrapTurn } from "../engine/turn";
+import { createRoomViewModel, createInitialTranscriptState, runTurn } from "../engine/turn";
 import { validateAdventureBundle } from "../engine/validation";
-import type { AdventureDefinition, GameState } from "../engine/types";
+import type { AdventureDefinition, GameState, TranscriptLine } from "../engine/types";
 import { bindRestartButton } from "../ui/dom/menus";
 import { createPromptController } from "../ui/dom/prompt";
 import { createStatusController } from "../ui/dom/status";
@@ -18,10 +16,13 @@ interface ShellElements {
   roomName: HTMLElement;
   actorName: HTMLElement;
   objective: HTMLElement;
+  lampState: HTMLElement;
   transcript: HTMLElement;
   promptForm: HTMLFormElement;
   promptInput: HTMLInputElement;
   restartButton: HTMLButtonElement;
+  saveButton: HTMLButtonElement;
+  loadButton: HTMLButtonElement;
   artMount: HTMLElement;
 }
 
@@ -42,6 +43,10 @@ function buildShell(root: HTMLElement): ShellElements {
                   <span id="actor-name"></span>
                 </div>
                 <div>
+                  <strong>Lamp</strong>
+                  <span id="lamp-state"></span>
+                </div>
+                <div>
                   <strong>Objective</strong>
                   <span id="objective-text"></span>
                 </div>
@@ -58,15 +63,17 @@ function buildShell(root: HTMLElement): ShellElements {
               id="prompt-input"
               class="lantern-prompt__input"
               autocomplete="off"
-              placeholder="Try LOOK, INVENTORY, EAST, or WEST"
+              placeholder="Try LOOK, TAKE CROWBAR, NESSA, PICK LOCK, or EAST"
               spellcheck="false"
             />
           </form>
           <div class="lantern-controls__row">
             <button class="lantern-button" id="restart-button" type="button">New Game</button>
+            <button class="lantern-button" id="save-button" type="button">Save</button>
+            <button class="lantern-button" id="load-button" type="button">Load</button>
           </div>
           <p class="lantern-help">
-            Lantern is currently running a bootstrap command loop while the full parser is under construction.
+            The parser supports directed commands, actor switching, inventory, object interaction, and save/load.
           </p>
         </section>
       </section>
@@ -78,10 +85,13 @@ function buildShell(root: HTMLElement): ShellElements {
     roomName: root.querySelector<HTMLElement>("#room-name")!,
     actorName: root.querySelector<HTMLElement>("#actor-name")!,
     objective: root.querySelector<HTMLElement>("#objective-text")!,
+    lampState: root.querySelector<HTMLElement>("#lamp-state")!,
     transcript: root.querySelector<HTMLElement>("#transcript")!,
     promptForm: root.querySelector<HTMLFormElement>("#prompt-form")!,
     promptInput: root.querySelector<HTMLInputElement>("#prompt-input")!,
     restartButton: root.querySelector<HTMLButtonElement>("#restart-button")!,
+    saveButton: root.querySelector<HTMLButtonElement>("#save-button")!,
+    loadButton: root.querySelector<HTMLButtonElement>("#load-button")!,
     artMount: root.querySelector<HTMLElement>("#lantern-art")!
   };
 }
@@ -106,54 +116,27 @@ function createGame(parent: HTMLElement): Phaser.Game {
   });
 }
 
-function renderRoomStatus(
-  adventure: AdventureDefinition,
-  state: GameState,
-  statusController: ReturnType<typeof createStatusController>
+function appendLines(
+  transcriptController: ReturnType<typeof createTranscriptController>,
+  lines: TranscriptLine[]
 ): void {
-  const room = getRoomById(adventure, state.currentRoomId);
-  const actor = adventure.content.actors.find((candidate) => candidate.id === state.activeActorId);
-
-  statusController.render({
-    adventureTitle: adventure.metadata.title,
-    roomTitle: room.title,
-    actorName: actor?.name ?? state.activeActorId,
-    objective: adventure.content.objective
-  });
-
-  eventBus.emit("room:changed", {
-    adventureTitle: adventure.metadata.title,
-    roomTitle: room.title,
-    artLabel: getArtLabel(adventure, room.artId)
-  });
+  for (const line of lines) {
+    transcriptController.append(line);
+  }
 }
 
-function bootstrapTranscript(
+function renderState(
   adventure: AdventureDefinition,
+  state: GameState,
   transcriptController: ReturnType<typeof createTranscriptController>,
-  state: GameState
-): GameState {
-  let nextState = appendTranscript(
-    state,
-    "system",
-    `${adventure.metadata.title} is loaded into the Lantern host.`
-  );
+  statusController: ReturnType<typeof createStatusController>
+): void {
+  transcriptController.clear();
+  appendLines(transcriptController, state.transcript);
 
-  transcriptController.append(nextState.transcript.at(-1)!);
-
-  const room = getRoomById(adventure, nextState.currentRoomId);
-  nextState = {
-    ...nextState,
-    visitCounts: {
-      ...nextState.visitCounts,
-      [room.id]: 1
-    }
-  };
-
-  nextState = appendTranscript(nextState, "system", room.descriptions.first);
-  transcriptController.append(nextState.transcript.at(-1)!);
-
-  return nextState;
+  const viewModel = createRoomViewModel(adventure, state);
+  statusController.render(viewModel);
+  eventBus.emit("room:changed", viewModel);
 }
 
 export async function bootApplication(root: HTMLElement | null): Promise<void> {
@@ -177,35 +160,35 @@ export async function bootApplication(root: HTMLElement | null): Promise<void> {
     shell.adventureName,
     shell.roomName,
     shell.actorName,
-    shell.objective
+    shell.objective,
+    shell.lampState
   );
 
   const game = createGame(shell.artMount);
-  let state = bootstrapTranscript(adventure, transcriptController, createInitialGameState(adventure));
+  let state = createInitialTranscriptState(adventure);
 
-  renderRoomStatus(adventure, state, statusController);
+  renderState(adventure, state, transcriptController, statusController);
 
-  promptController.bind((command) => {
-    state = appendTranscript(state, "player", command);
-    transcriptController.append({ kind: "player", text: command });
-
-    const result = runBootstrapTurn(adventure, state, command);
-    state = result.state;
-
-    for (const message of result.messages) {
-      transcriptController.append({ kind: "system", text: message });
-      state = appendTranscript(state, "system", message);
-    }
-
-    renderRoomStatus(adventure, state, statusController);
+  function dispatch(command: string): void {
+    state = runTurn(adventure, state, command, window.localStorage).state;
+    renderState(adventure, state, transcriptController, statusController);
     promptController.reset();
-  });
+  }
+
+  promptController.bind(dispatch);
 
   bindRestartButton(shell.restartButton, () => {
-    transcriptController.clear();
-    state = bootstrapTranscript(adventure, transcriptController, createInitialGameState(adventure));
-    renderRoomStatus(adventure, state, statusController);
+    state = createInitialTranscriptState(adventure);
+    renderState(adventure, state, transcriptController, statusController);
     promptController.focus();
+  });
+
+  shell.saveButton.addEventListener("click", () => {
+    dispatch("SAVE");
+  });
+
+  shell.loadButton.addEventListener("click", () => {
+    dispatch("LOAD");
   });
 
   root.addEventListener(

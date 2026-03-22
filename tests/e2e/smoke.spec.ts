@@ -4,6 +4,8 @@ test("boots the Lantern shell", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "The Harrow Mine Job" })).toBeVisible();
-  await expect(page.getByText("Town Edge")).toBeVisible();
-  await expect(page.getByPlaceholder("Try LOOK, INVENTORY, EAST, or WEST")).toBeVisible();
+  await expect(page.locator("#room-name")).toHaveText("Town Edge");
+  await expect(
+    page.getByPlaceholder("Try LOOK, TAKE CROWBAR, NESSA, PICK LOCK, or EAST")
+  ).toBeVisible();
 });
