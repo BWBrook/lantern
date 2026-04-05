@@ -54,12 +54,6 @@ export function createInitialTranscriptState(adventure: AdventureDefinition): Ga
     }
   };
 
-  state = appendTranscript(
-    state,
-    "system",
-    `${adventure.metadata.title} is loaded into the Lantern host.`
-  );
-
   for (const message of roomEntryMessages(adventure, state)) {
     state = appendTranscript(state, "system", message);
   }

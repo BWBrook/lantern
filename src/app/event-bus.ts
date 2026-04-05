@@ -6,8 +6,10 @@ type LanternEventMap = {
 
 class LanternEventBus {
   private readonly target = new EventTarget();
+  private readonly latest = new Map<keyof LanternEventMap, LanternEventMap[keyof LanternEventMap]>();
 
   emit<K extends keyof LanternEventMap>(type: K, detail: LanternEventMap[K]): void {
+    this.latest.set(type, detail);
     this.target.dispatchEvent(new CustomEvent(type, { detail }));
   }
 
@@ -21,6 +23,12 @@ class LanternEventBus {
     };
 
     this.target.addEventListener(type, listener);
+
+    const latestDetail = this.latest.get(type);
+
+    if (latestDetail) {
+      handler(latestDetail as LanternEventMap[K]);
+    }
 
     return () => {
       this.target.removeEventListener(type, listener);

@@ -251,7 +251,7 @@ function notYetMessage(verb: CanonicalVerb): string {
     case "WAIT":
       return "You wait a moment, but the mine remains itself.";
     case "HELP":
-      return "Try LOOK, EXAMINE, TAKE, OPEN, UNLOCK, LIGHT, ATTACH, TURN, or a compass direction.";
+      return "Try LOOK, EXAMINE, TAKE, OPEN, UNLOCK, LIGHT, ATTACH, TURN, SAVE, LOAD, or a compass direction. Use BE NESSA to switch actor, or NESSA, PICK LOCK to direct her.";
     default:
       return "That action is not wired up yet."
   }

@@ -62,8 +62,9 @@ function buildShell(root: HTMLElement): ShellElements {
             <input
               id="prompt-input"
               class="lantern-prompt__input"
+              aria-label="Command prompt"
               autocomplete="off"
-              placeholder="Try LOOK, TAKE CROWBAR, NESSA, PICK LOCK, or EAST"
+              placeholder="Try LOOK, EAST, TAKE CROWBAR, or NESSA"
               spellcheck="false"
             />
           </form>
@@ -73,7 +74,7 @@ function buildShell(root: HTMLElement): ShellElements {
             <button class="lantern-button" id="load-button" type="button">Load</button>
           </div>
           <p class="lantern-help">
-            The parser supports directed commands, actor switching, inventory, object interaction, and save/load.
+            Try LOOK, EXAMINE MILESTONE, BE NESSA, NESSA, PICK LOCK, SAVE, or LOAD.
           </p>
         </section>
       </section>

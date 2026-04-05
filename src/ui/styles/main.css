@@ -146,6 +146,7 @@ input {
 
 .lantern-controls__row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -184,5 +185,14 @@ input {
 
   .lantern-status__title {
     font-size: 1.8rem;
+  }
+
+  .lantern-prompt__input {
+    font-size: 0.95rem;
+    padding: 12px 16px;
+  }
+
+  .lantern-help {
+    font-size: 0.9rem;
   }
 }
