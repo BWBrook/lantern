@@ -74,7 +74,10 @@ export function createRoomViewModel(
 
   return {
     adventureTitle: adventure.metadata.title,
+    adventureSummary: adventure.metadata.summary,
     roomTitle: room.title,
+    roomId: room.id,
+    artId: room.artId,
     artLabel: getArtLabel(adventure, room.artId),
     actorName: actor.name,
     objective: adventure.content.objective,

@@ -229,7 +229,10 @@ export interface AdventureDefinition {
 
 export interface RoomViewModel {
   adventureTitle: string;
+  adventureSummary: string;
   roomTitle: string;
+  roomId: RoomId;
+  artId: ArtId;
   artLabel: string;
   actorName: string;
   objective: string;

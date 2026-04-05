@@ -3,6 +3,7 @@ interface StatusViewModel {
   objective: string;
   roomTitle: string;
   adventureTitle: string;
+  adventureSummary: string;
   lampState: string;
 }
 
@@ -12,6 +13,7 @@ export interface StatusController {
 
 export function createStatusController(
   adventureNameElement: HTMLElement,
+  adventureSummaryElement: HTMLElement,
   roomNameElement: HTMLElement,
   actorElement: HTMLElement,
   objectiveElement: HTMLElement,
@@ -20,6 +22,7 @@ export function createStatusController(
   return {
     render(viewModel) {
       adventureNameElement.textContent = viewModel.adventureTitle;
+      adventureSummaryElement.textContent = viewModel.adventureSummary;
       roomNameElement.textContent = viewModel.roomTitle;
       actorElement.textContent = viewModel.actorName;
       objectiveElement.textContent = viewModel.objective;

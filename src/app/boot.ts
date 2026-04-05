@@ -13,6 +13,7 @@ import { GameScene } from "../ui/phaser/GameScene";
 
 interface ShellElements {
   adventureName: HTMLElement;
+  adventureSummary: HTMLElement;
   roomName: HTMLElement;
   actorName: HTMLElement;
   objective: HTMLElement;
@@ -36,21 +37,23 @@ function buildShell(root: HTMLElement): ShellElements {
             <section class="lantern-card lantern-status">
               <p class="lantern-status__eyebrow">Bundled Adventure</p>
               <h1 class="lantern-status__title" id="adventure-name"></h1>
-              <p class="lantern-status__room" id="room-name"></p>
-              <div class="lantern-status__meta">
-                <div>
-                  <strong>Active Actor</strong>
+              <p class="lantern-status__summary" id="adventure-summary"></p>
+              <div class="lantern-status__chips">
+                <div class="lantern-chip">
+                  <strong>Room</strong>
+                  <span id="room-name"></span>
+                </div>
+                <div class="lantern-chip">
+                  <strong>Actor</strong>
                   <span id="actor-name"></span>
                 </div>
-                <div>
+                <div class="lantern-chip">
                   <strong>Lamp</strong>
                   <span id="lamp-state"></span>
                 </div>
-                <div>
-                  <strong>Objective</strong>
-                  <span id="objective-text"></span>
-                </div>
               </div>
+              <p class="lantern-status__label">Current Aim</p>
+              <p class="lantern-status__objective" id="objective-text"></p>
             </section>
             <section class="lantern-card lantern-log">
               <div class="transcript" id="transcript" aria-live="polite"></div>
@@ -83,6 +86,7 @@ function buildShell(root: HTMLElement): ShellElements {
 
   return {
     adventureName: root.querySelector<HTMLElement>("#adventure-name")!,
+    adventureSummary: root.querySelector<HTMLElement>("#adventure-summary")!,
     roomName: root.querySelector<HTMLElement>("#room-name")!,
     actorName: root.querySelector<HTMLElement>("#actor-name")!,
     objective: root.querySelector<HTMLElement>("#objective-text")!,
@@ -107,12 +111,16 @@ function applyTheme(root: HTMLElement, adventure: AdventureDefinition): void {
 function createGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     type: Phaser.AUTO,
-    width: INTERNAL_SCENE_WIDTH,
-    height: INTERNAL_SCENE_HEIGHT,
     backgroundColor: "#17120e",
     parent,
     pixelArt: true,
     roundPixels: true,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: INTERNAL_SCENE_WIDTH,
+      height: INTERNAL_SCENE_HEIGHT
+    },
     scene: [GameScene]
   });
 }
@@ -159,6 +167,7 @@ export async function bootApplication(root: HTMLElement | null): Promise<void> {
   const promptController = createPromptController(shell.promptForm, shell.promptInput);
   const statusController = createStatusController(
     shell.adventureName,
+    shell.adventureSummary,
     shell.roomName,
     shell.actorName,
     shell.objective,
