@@ -4,8 +4,9 @@ import { handleInventory, handleDrop, handleTake } from "./actions/inventory";
 import { handleGo } from "./actions/movement";
 import { handleObjectAction } from "./actions/objects";
 import { describeNavigation } from "./navigation";
-import { parseCommand } from "./parser/parse";
-import { resolveIntent } from "./parser/resolve";
+import { ParserDiagnosticError } from "./parser/diagnostics";
+import { parseAndResolveCommand } from "./parser/parse";
+import { formatParserDiagnosticMessage } from "./parser/resolve";
 import { loadGame, saveGame } from "./save/storage";
 import { createInitialGameState } from "./state";
 import type {
@@ -100,7 +101,7 @@ export function runTurn(
   let nextState = appendTranscript(state, "player", trimmed);
 
   try {
-    const intent = resolveIntent(adventure, nextState, parseCommand(trimmed, adventure.lexicon));
+    const intent = parseAndResolveCommand(adventure, nextState, trimmed);
 
     switch (intent.verb) {
       case "LOOK":
@@ -147,6 +148,11 @@ export function runTurn(
       }
     }
   } catch (error) {
+    if (error instanceof ParserDiagnosticError) {
+      const message = formatParserDiagnosticMessage(error.diagnostic, adventure, nextState) || error.message;
+      return withMessages(nextState, [message]);
+    }
+
     const message = error instanceof Error ? error.message : "Something went wrong.";
 
     return withMessages(nextState, [message]);

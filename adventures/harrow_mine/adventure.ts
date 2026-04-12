@@ -1,8 +1,8 @@
 import { actors } from "./content/actors";
 import { art } from "./content/art";
+import { dictionary } from "./content/dictionary";
 import { flags } from "./content/flags";
 import { items } from "./content/items";
-import { lexicon } from "./content/lexicon";
 import { metadata } from "./content/metadata";
 import { objective } from "./content/objective";
 import { rooms } from "./content/rooms";
@@ -19,7 +19,7 @@ const theme: AdventureTheme = {
 const harrowMineAdventure: AdventureDefinition = {
   metadata,
   theme,
-  lexicon,
+  dictionary,
   rules: {
     lightFlagId: "lamp_lit"
   },

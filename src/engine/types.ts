@@ -67,11 +67,14 @@ export interface AdventureTheme {
   textColor: string;
 }
 
-export interface AdventureLexicon {
-  actorAliases: Record<string, ActorId>;
-  directionAliases: Record<string, Direction>;
-  nounAliases: Record<string, string>;
-  verbAliases: Record<string, string>;
+export interface AdventureDictionary {
+  verbs: Partial<Record<CanonicalVerb, string[]>>;
+  directions: Partial<Record<Direction, string[]>>;
+  actors: Partial<Record<ActorId, string[]>>;
+  items: Partial<Record<ItemId, string[]>>;
+  groups?: Record<string, string[]>;
+  stopWords?: string[];
+  phraseAliases?: Record<string, CanonicalVerb>;
 }
 
 export interface AdventureExit {
@@ -219,7 +222,7 @@ export type AdventureHookRegistry = Record<HookId, AdventureHook>;
 export interface AdventureDefinition {
   metadata: AdventureMetadata;
   theme: AdventureTheme;
-  lexicon: AdventureLexicon;
+  dictionary: AdventureDictionary;
   rules?: AdventureRules;
   content: AdventureContent;
   hooks: AdventureHookRegistry;

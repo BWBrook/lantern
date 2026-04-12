@@ -189,7 +189,8 @@ export function setPronounIt(state: GameState, itemId: string | undefined): Game
     ...state,
     pronouns: {
       ...state.pronouns,
-      it: itemId
+      it: itemId,
+      them: itemId ? [itemId] : undefined
     }
   };
 }

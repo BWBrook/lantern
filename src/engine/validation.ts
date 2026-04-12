@@ -69,6 +69,88 @@ function validateItemHooks(
   return issues;
 }
 
+function validateDictionary(
+  adventure: AdventureDefinition,
+  actorIds: Set<string>,
+  itemIds: Set<string>
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const aliasOwners = new Map<string, Set<string>>();
+
+  for (const actorId of Object.keys(adventure.dictionary.actors)) {
+    if (!actorIds.has(actorId)) {
+      issues.push({
+        scope: "actor",
+        id: actorId,
+        message: `Dictionary references unknown actor "${actorId}".`
+      });
+    }
+  }
+
+  for (const itemId of Object.keys(adventure.dictionary.items)) {
+    if (!itemIds.has(itemId)) {
+      issues.push({
+        scope: "item",
+        id: itemId,
+        message: `Dictionary references unknown item "${itemId}".`
+      });
+    }
+  }
+
+  for (const [alias, targets] of Object.entries(adventure.dictionary.groups ?? {})) {
+    for (const target of targets) {
+      if (!itemIds.has(target)) {
+        issues.push({
+          scope: "item",
+          id: target,
+          message: `Dictionary group "${alias}" references unknown item "${target}".`
+        });
+      }
+    }
+  }
+
+  const aliasPairs: Array<[string, string[]]> = [];
+
+  for (const [actorId, aliases] of Object.entries(adventure.dictionary.actors)) {
+    aliasPairs.push(...(aliases ?? []).map((alias) => [alias, [`actor:${actorId}`]] as [string, string[]]));
+  }
+
+  for (const [itemId, aliases] of Object.entries(adventure.dictionary.items)) {
+    aliasPairs.push(...(aliases ?? []).map((alias) => [alias, [`item:${itemId}`]] as [string, string[]]));
+  }
+
+  for (const item of adventure.content.items) {
+    aliasPairs.push(...(item.aliases ?? []).map((alias) => [alias, [`item:${item.id}`]] as [string, string[]]));
+  }
+
+  for (const actor of adventure.content.actors) {
+    aliasPairs.push(...(actor.aliases ?? []).map((alias) => [alias, [`actor:${actor.id}`]] as [string, string[]]));
+  }
+
+  for (const [alias, owners] of aliasPairs) {
+    const normalized = alias.trim().toLowerCase();
+    const current = aliasOwners.get(normalized) ?? new Set<string>();
+
+    for (const owner of owners) {
+      current.add(owner);
+    }
+
+    aliasOwners.set(normalized, current);
+  }
+
+  for (const [alias, owners] of aliasOwners.entries()) {
+    if (owners.size > 1) {
+      issues.push({
+        scope: "metadata",
+        id: alias,
+        message: `Alias "${alias}" is declared for multiple targets (${[...owners].join(", ")}). Prefer dictionary groups for shared nouns.`
+      });
+    }
+  }
+
+  return issues;
+}
+
 export function validateAdventureBundle(
   adventure: AdventureDefinition
 ): ValidationIssue[] {
@@ -134,6 +216,7 @@ export function validateAdventureBundle(
 
   issues.push(...validateItemLocations(adventure.content.items, roomIds));
   issues.push(...validateItemHooks(adventure.content.items, hookIds));
+  issues.push(...validateDictionary(adventure, actorIds, itemIds));
 
   if (!roomIds.has(initialState.currentRoomId)) {
     issues.push({

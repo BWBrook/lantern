@@ -52,7 +52,7 @@ Lantern v1 is intentionally opinionated.
 
 - metadata and presentation identity
 - rooms, items, actors, flags, prose, and art references
-- parser-facing lexicon additions such as aliases, actor names, and object names
+- parser-facing dictionary additions such as aliases, actor names, and object names
 - bespoke rule hooks referenced by that adventure's content
 - initial state, objective text, and victory conditions
 - bundled assets and test fixtures such as a golden-path transcript
@@ -86,7 +86,7 @@ The repo should converge toward this split:
 │     │  ├─ items.ts
 │     │  ├─ actors.ts
 │     │  ├─ flags.ts
-│     │  ├─ lexicon.ts
+│     │  ├─ dictionary.ts
 │     │  ├─ art.ts
 │     │  └─ objective.ts
 │     ├─ hooks/
@@ -127,7 +127,8 @@ At minimum, the bundle should provide:
 - `metadata`: stable `id`, title, short description, and version string
 - `theme`: palette/token surface, labels, and presentation defaults used by the
   shared UI shell
-- `lexicon`: aliases for actors, objects, verbs, and directions that extend the
+- `dictionary`: aliases for actors, objects, verbs, directions, groups, and
+  phrase forms that extend the
   engine-owned parser vocabulary
 - `content`: typed registries for rooms, items, actors, flags, art references,
   and objective text
@@ -144,7 +145,7 @@ The runtime contract should stay small and explicit. A good starting shape is:
 interface AdventureDefinition {
   metadata: AdventureMetadata;
   theme: AdventureTheme;
-  lexicon: AdventureLexicon;
+  dictionary: AdventureDictionary;
   content: AdventureContent;
   hooks: AdventureHookRegistry;
   createInitialState(): AdventureStateSeed;
@@ -170,7 +171,7 @@ Each real adventure should live in its own folder under `adventures/`.
 
 Authors may extend Lantern through:
 
-- lexicon aliases and adventure-specific noun/verb surface forms
+- dictionary aliases and adventure-specific noun/verb surface forms
 - content-driven state such as rooms, items, exits, actors, flags, and objective
   text
 - named hook functions for bespoke interactions
@@ -277,7 +278,7 @@ When a new adventure is added later, the minimum path should be:
 1. Create `adventures/<id>/` from the agreed structure.
 2. Set stable metadata and theme tokens.
 3. Author rooms, items, actors, flags, and objective text in typed modules.
-4. Add lexicon aliases for the intended command language.
+4. Add dictionary aliases for the intended command language.
 5. Implement only the bespoke hooks that the generic engine cannot cover.
 6. Add validation and at least one smoke test.
 7. Add a short happy-path transcript once the slice is playable.

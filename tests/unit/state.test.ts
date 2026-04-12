@@ -50,6 +50,48 @@ describe("turn loop", () => {
     ]);
   });
 
+  it("offers contextual suggestions for noun-only input", () => {
+    let state = createInitialTranscriptState(harrowMineAdventure);
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+
+    const result = runTurn(harrowMineAdventure, state, "door", undefined);
+
+    expect(result.messages).toEqual(["Try EXAMINE DOOR, OPEN DOOR, or UNLOCK DOOR."]);
+  });
+
+  it("uses clearer parser diagnostics for malformed unlock commands", () => {
+    const state = createInitialTranscriptState(harrowMineAdventure);
+    const result = runTurn(harrowMineAdventure, state, "unlock with key", undefined);
+
+    expect(result.messages).toEqual(["Unlock what with what?"]);
+  });
+
+  it("reports known offstage objects as not visible", () => {
+    const state = createInitialTranscriptState(harrowMineAdventure);
+    const result = runTurn(harrowMineAdventure, state, "examine lockbox", undefined);
+
+    expect(result.messages).toEqual([
+      "You know about paymaster's lockbox, but you cannot see it here."
+    ]);
+  });
+
+  it("accepts alternate natural phrasing for Harrow puzzle verbs", () => {
+    let state = createInitialTranscriptState(harrowMineAdventure);
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "get crowbar", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "open shed door", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "tell nessa to pick lock", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "open shed door", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+    state = runTurn(harrowMineAdventure, state, "pick up lamp", undefined).state;
+
+    expect(state.inventory).toContain("crowbar");
+    expect(state.inventory).toContain("lamp");
+    expect(state.flags).toContain("shed_unlocked");
+  });
+
   it("completes the Harrow golden path to victory", () => {
     const commands = readFileSync(
       join(process.cwd(), "adventures/harrow_mine/tests/golden-path.txt"),

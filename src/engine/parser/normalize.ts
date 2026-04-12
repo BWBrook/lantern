@@ -1,60 +1,32 @@
-import type { AdventureLexicon, CanonicalVerb, Direction, Intent } from "../types";
+import type { Intent } from "../types";
+import type { CompiledAdventureDictionary } from "./dictionary";
+import { normalizeDictionaryPhrase } from "./dictionary";
+import { ParserDiagnosticError } from "./diagnostics";
+import { matchLeadingPhrase } from "./phrases";
 
-const ARTICLES = new Set(["a", "an", "the"]);
-const PREPOSITIONS = new Set(["with", "using", "at", "in", "into", "on", "from", "to", "through"]);
+const PREPOSITIONS = new Set([
+  "at",
+  "from",
+  "in",
+  "into",
+  "on",
+  "through",
+  "to",
+  "using",
+  "with"
+]);
 
-const BASE_VERB_ALIASES: Record<string, CanonicalVerb> = {
-  attach: "ATTACH",
-  be: "SWITCH_ACTOR",
-  close: "CLOSE",
-  cross: "CROSS",
-  drop: "DROP",
-  examine: "EXAMINE",
-  extinguish: "EXTINGUISH",
-  go: "GO",
-  help: "HELP",
-  inventory: "INVENTORY",
-  light: "LIGHT",
-  load: "LOAD",
-  look: "LOOK",
-  move: "MOVE",
-  open: "OPEN",
-  pick: "UNLOCK",
-  pry: "MOVE",
-  pull: "PULL",
-  push: "PUSH",
-  save: "SAVE",
-  search: "SEARCH",
-  take: "TAKE",
-  turn: "TURN",
-  unlock: "UNLOCK",
-  use: "USE",
-  wait: "WAIT"
-};
-
-const BASE_DIRECTION_ALIASES: Record<string, Direction> = {
-  e: "east",
-  east: "east",
-  n: "north",
-  north: "north",
-  s: "south",
-  south: "south",
-  w: "west",
-  west: "west"
-};
-
-function stripArticles(tokens: string[]): string[] {
-  return tokens.filter((token) => !ARTICLES.has(token));
+function stripStopWords(tokens: string[], dictionary: CompiledAdventureDictionary): string[] {
+  return tokens.filter((token) => token === "," || !dictionary.stopWords.has(token));
 }
 
-function normalizeVerb(token: string, lexicon: AdventureLexicon): CanonicalVerb | undefined {
-  const mappedToken = lexicon.verbAliases[token] ?? token;
+function getSingleActorId(
+  alias: string,
+  dictionary: CompiledAdventureDictionary
+): string | undefined {
+  const matches = dictionary.actorAliasToIds.get(alias) ?? [];
 
-  return BASE_VERB_ALIASES[mappedToken];
-}
-
-function normalizeDirection(token: string, lexicon: AdventureLexicon): Direction | undefined {
-  return lexicon.directionAliases[token] ?? BASE_DIRECTION_ALIASES[token];
+  return matches[0];
 }
 
 function splitPreposition(tokens: string[]): {
@@ -79,11 +51,103 @@ function splitPreposition(tokens: string[]): {
   };
 }
 
-export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon): Intent {
-  const tokens = stripArticles(rawTokens);
+function levenshteinDistance(left: string, right: string): number {
+  const rows = left.length + 1;
+  const cols = right.length + 1;
+  const table = Array.from({ length: rows }, () => Array<number>(cols).fill(0));
+
+  for (let row = 0; row < rows; row += 1) {
+    table[row]![0] = row;
+  }
+
+  for (let col = 0; col < cols; col += 1) {
+    table[0]![col] = col;
+  }
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1;
+      table[row]![col] = Math.min(
+        table[row - 1]![col]! + 1,
+        table[row]![col - 1]! + 1,
+        table[row - 1]![col - 1]! + cost
+      );
+    }
+  }
+
+  return table[left.length]![right.length]!;
+}
+
+function suggestCommandWord(
+  token: string,
+  dictionary: CompiledAdventureDictionary
+): string | undefined {
+  const candidates = [...dictionary.commandWords];
+  let best: { distance: number; word: string } | undefined;
+
+  for (const word of candidates) {
+    const distance = levenshteinDistance(token, word);
+
+    if (distance > 2) {
+      continue;
+    }
+
+    if (!best || distance < best.distance) {
+      best = { distance, word };
+    }
+  }
+
+  return best?.word;
+}
+
+function phraseTokensMatch(phrase: string, queryTokens: string[]): boolean {
+  const phraseTokens = normalizeDictionaryPhrase(phrase).split(" ").filter(Boolean);
+
+  return queryTokens.every((token) => phraseTokens.includes(token));
+}
+
+function isPlausibleReferencePhrase(
+  phrase: string,
+  dictionary: CompiledAdventureDictionary
+): boolean {
+  const normalized = normalizeDictionaryPhrase(phrase);
+  const queryTokens = normalized.split(" ").filter(Boolean);
+
+  if (queryTokens.length === 0) {
+    return false;
+  }
+
+  if (
+    dictionary.actorAliasToIds.has(normalized) ||
+    dictionary.itemAliasToIds.has(normalized) ||
+    dictionary.groupAliasToIds.has(normalized)
+  ) {
+    return true;
+  }
+
+  for (const phrases of dictionary.actorPhrasesById.values()) {
+    if (phrases.some((candidate) => phraseTokensMatch(candidate, queryTokens))) {
+      return true;
+    }
+  }
+
+  for (const phrases of dictionary.itemPhrasesById.values()) {
+    if (phrases.some((candidate) => phraseTokensMatch(candidate, queryTokens))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function normalizeTokens(
+  rawTokens: string[],
+  dictionary: CompiledAdventureDictionary
+): Intent {
+  const tokens = stripStopWords(rawTokens, dictionary);
 
   if (tokens.length === 0) {
-    throw new Error("Empty command.");
+    throw new ParserDiagnosticError({ code: "incomplete_command" });
   }
 
   let actorId: string | undefined;
@@ -92,28 +156,28 @@ export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon):
   const secondToken = working[1];
   const thirdToken = working[2];
 
-  if (firstToken && secondToken === "," && lexicon.actorAliases[firstToken]) {
-    actorId = lexicon.actorAliases[firstToken];
+  if (firstToken && secondToken === "," && getSingleActorId(firstToken, dictionary)) {
+    actorId = getSingleActorId(firstToken, dictionary);
     working = working.slice(2);
   } else if (
     firstToken === "tell" &&
     secondToken &&
-    lexicon.actorAliases[secondToken] &&
+    getSingleActorId(secondToken, dictionary) &&
     thirdToken === "to"
   ) {
-    actorId = lexicon.actorAliases[secondToken];
+    actorId = getSingleActorId(secondToken, dictionary);
     working = working.slice(3);
   }
 
   const raw = working.join(" ");
 
   if (working.length === 0) {
-    throw new Error("Incomplete command.");
+    throw new ParserDiagnosticError({ code: "incomplete_command" });
   }
 
   const soleToken = working[0];
 
-  if (working.length === 1 && soleToken && lexicon.actorAliases[soleToken]) {
+  if (working.length === 1 && soleToken && getSingleActorId(soleToken, dictionary)) {
     return {
       verb: "SWITCH_ACTOR",
       actorId: undefined,
@@ -124,13 +188,41 @@ export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon):
     };
   }
 
+  const phraseMatch = matchLeadingPhrase(working, dictionary);
+
+  if (phraseMatch) {
+    const remainder = working.slice(phraseMatch.consumed);
+
+    if (phraseMatch.verb === "SWITCH_ACTOR") {
+      return {
+        verb: phraseMatch.verb,
+        actorId: undefined,
+        directObject: remainder.join(" ") || undefined,
+        indirectObject: undefined,
+        preposition: undefined,
+        raw
+      };
+    }
+
+    const split = splitPreposition(remainder);
+
+    return {
+      verb: phraseMatch.verb,
+      actorId,
+      directObject: split.direct.join(" ") || undefined,
+      indirectObject: split.indirect.join(" ") || undefined,
+      preposition: split.preposition,
+      raw
+    };
+  }
+
   const commandHead = working[0];
 
   if (!commandHead) {
-    throw new Error("Incomplete command.");
+    throw new ParserDiagnosticError({ code: "incomplete_command" });
   }
 
-  const direction = normalizeDirection(commandHead, lexicon);
+  const direction = dictionary.directionAliases.get(commandHead);
 
   if (direction) {
     return {
@@ -143,10 +235,32 @@ export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon):
     };
   }
 
-  const verb = normalizeVerb(commandHead, lexicon);
+  const verb = dictionary.verbAliases.get(commandHead);
 
   if (!verb) {
-    throw new Error(`Unknown verb "${commandHead}".`);
+    const nounPhrase = working.join(" ");
+
+    if (isPlausibleReferencePhrase(nounPhrase, dictionary)) {
+      throw new ParserDiagnosticError({
+        code: "noun_only",
+        nounPhrase
+      });
+    }
+
+    const suggestion = suggestCommandWord(commandHead, dictionary);
+
+    throw new ParserDiagnosticError(
+      suggestion
+        ? {
+            code: "unknown_verb",
+            nounPhrase: commandHead,
+            suggestion
+          }
+        : {
+            code: "unknown_verb",
+            nounPhrase: commandHead
+          }
+    );
   }
 
   const remainder = working.slice(1);
@@ -163,6 +277,13 @@ export function normalizeTokens(rawTokens: string[], lexicon: AdventureLexicon):
   }
 
   const split = splitPreposition(remainder);
+
+  if (verb === "UNLOCK" && split.preposition === "with" && (!split.direct.length || !split.indirect.length)) {
+    throw new ParserDiagnosticError({
+      code: !split.direct.length ? "missing_direct_object" : "missing_indirect_object",
+      verb
+    });
+  }
 
   return {
     verb,

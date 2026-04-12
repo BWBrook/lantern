@@ -15,16 +15,27 @@ const tinyAdventure: AdventureDefinition = {
     summary: "A two-room fixture used to prove the Lantern contract."
   },
   theme,
-  lexicon: {
-    actorAliases: {
-      scout: "scout"
+  dictionary: {
+    verbs: {},
+    directions: {
+      east: ["east"],
+      west: ["west"]
     },
-    directionAliases: {
-      east: "east",
-      west: "west"
+    actors: {
+      scout: ["scout"]
     },
-    nounAliases: {},
-    verbAliases: {}
+    items: {
+      iron_door: ["iron door"],
+      oak_door: ["oak door"],
+      signal_lamp: ["lamp", "signal lamp"]
+    },
+    groups: {
+      door: ["oak_door", "iron_door"]
+    },
+    phraseAliases: {
+      "look at": "EXAMINE",
+      "turn on": "LIGHT"
+    }
   },
   content: {
     objective: "Walk east and back again.",
@@ -60,7 +71,31 @@ const tinyAdventure: AdventureDefinition = {
         ]
       }
     ],
-    items: [],
+    items: [
+      {
+        id: "oak_door",
+        name: "oak door",
+        description: "A plain oak door with a brass latch.",
+        location: "clearing",
+        portable: false,
+        openable: true
+      },
+      {
+        id: "iron_door",
+        name: "iron door",
+        description: "A heavier iron door with a dark handle.",
+        location: "clearing",
+        portable: false,
+        openable: true
+      },
+      {
+        id: "signal_lamp",
+        name: "signal lamp",
+        description: "A small lamp used by the fixture scout.",
+        location: "camp",
+        hooks: {}
+      }
+    ],
     actors: [
       {
         id: "scout",

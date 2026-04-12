@@ -88,7 +88,7 @@ The implementation should converge toward something close to this shape:
 │     │  ├─ items.ts
 │     │  ├─ actors.ts
 │     │  ├─ flags.ts
-│     │  ├─ lexicon.ts
+│     │  ├─ dictionary.ts
 │     │  ├─ art.ts
 │     │  └─ objective.ts
 │     ├─ hooks/
@@ -299,7 +299,7 @@ to ignore.
 
 ### Tasks
 
-- Create TypeScript interfaces for adventure metadata, theme tokens, lexicon,
+- Create TypeScript interfaces for adventure metadata, theme tokens, dictionary,
   rooms, items, actors, flags, and hook registries.
 - Create a top-level `AdventureDefinition` contract.
 - Create adventure-owned content registries under `adventures/<id>/`.
@@ -328,7 +328,7 @@ to ignore.
 - Harrow has a clean bundle entrypoint
 - a second tiny fixture or scaffold proves the contract is not Harrow-only
 
-## Work package 2 — Parser v1 with injected lexicon
+## Work package 2 — Parser v1 with injected dictionary
 
 ### Goal
 
@@ -360,7 +360,7 @@ adventure to extend vocabulary cleanly.
 
 - a fixture set of representative commands parses into correct canonical intents
 - `NESSA, PICK LOCK`, `TAKE LAMP`, `UNLOCK DOOR WITH KEY`, and `BE NESSA` all
-  parse correctly when the Harrow lexicon is loaded
+  parse correctly when the Harrow dictionary is loaded
 - parser errors are understandable and not just raw exceptions
 - the parser remains Lantern-owned rather than adventure-specific
 
