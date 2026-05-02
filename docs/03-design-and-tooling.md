@@ -187,7 +187,6 @@ interface RoomDef {
   id: RoomId;
   title: string;
   artId: string;
-  artPrompt: string;
   darkness: "lit" | "dark";
   descriptions: {
     first: string;
@@ -239,7 +238,10 @@ If a later version wants per-character inventory, that can be added after the MV
 
 ## Art workflow recommendation
 
-Every room definition should carry an `artPrompt` seed. The art pipeline should work like this:
+Every room definition should carry an `artId`. The adventure's `content/art.ts`
+manifest should then describe that art id, optionally point at a final in-repo
+image with `assetPath`, and keep prompt notes beside the assets. The art
+pipeline should work like this:
 
 1. lock the room list and room identities  
 2. write short style-guide rules for framing, palette, and mood  

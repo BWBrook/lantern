@@ -131,7 +131,7 @@ At minimum, the bundle should provide:
   phrase forms that extend the
   engine-owned parser vocabulary
 - `content`: typed registries for rooms, items, actors, flags, art references,
-  and objective text
+  in-repo asset paths, and objective text
 - `hooks`: a named registry of bespoke actions or rule helpers referenced by the
   adventure's content
 - `createInitialState()`: the authoritative starting world state for that
@@ -164,7 +164,9 @@ Each real adventure should live in its own folder under `adventures/`.
 
 - ids remain human-readable and `lower_snake_case`
 - ids only need to be unique within a single adventure bundle
-- art references should resolve inside that adventure's asset set
+- art references should resolve inside that adventure's asset set; if a final
+  image is available, the art manifest should point at it with an in-repo
+  `assetPath`
 - test fixtures should live beside the adventure they describe
 
 ### Supported extension points in v1

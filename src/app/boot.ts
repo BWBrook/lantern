@@ -70,6 +70,9 @@ function buildShell(root: HTMLElement): ShellElements {
               placeholder="Try LOOK, EAST, TAKE CROWBAR, or NESSA"
               spellcheck="false"
             />
+            <button class="lantern-prompt__submit" type="submit" aria-label="Submit command">
+              Enter
+            </button>
           </form>
           <div class="lantern-controls__row">
             <button class="lantern-button" id="restart-button" type="button">New Game</button>

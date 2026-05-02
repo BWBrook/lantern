@@ -555,8 +555,9 @@ Lantern's shared asset conventions.
 
 ### Tasks
 
-- Create an adventure-level art manifest mapping Harrow rooms to image ids and
-  prompt seeds.
+- Create an adventure-level art manifest mapping Harrow rooms to image ids,
+  final image asset paths when available, and prompt notes stored beside the
+  assets.
 - Create stable placeholder art for every Harrow room.
 - Produce at least six stronger scene illustrations for key Harrow rooms:
   - `loading_yard`
@@ -570,7 +571,7 @@ Lantern's shared asset conventions.
 
 ### Deliverables
 
-- Harrow art manifest
+- Harrow art manifest with optional in-repo `assetPath` entries
 - Harrow placeholder scene set
 - at least six curated Harrow room images
 - crisp scaling behavior

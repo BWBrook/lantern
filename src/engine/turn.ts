@@ -1,4 +1,4 @@
-import { appendTranscript, describeRoom, getActorById, getArtLabel, getRoomById } from "./adventure";
+import { appendTranscript, describeRoom, getActorById, getArtAssetPath, getArtLabel, getRoomById } from "./adventure";
 import { handleSwitchActor } from "./actions/actors";
 import { handleInventory, handleDrop, handleTake } from "./actions/inventory";
 import { handleGo } from "./actions/movement";
@@ -80,6 +80,7 @@ export function createRoomViewModel(
     roomId: room.id,
     artId: room.artId,
     artLabel: getArtLabel(adventure, room.artId),
+    artAssetPath: getArtAssetPath(adventure, room.artId),
     actorName: actor.name,
     objective: adventure.content.objective,
     lampState

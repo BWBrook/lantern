@@ -166,8 +166,10 @@ input {
 }
 
 .lantern-prompt {
+  align-items: center;
   display: grid;
   gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .lantern-prompt__input {
@@ -175,13 +177,30 @@ input {
   border: 1px solid var(--lantern-border);
   border-radius: 999px;
   color: var(--lantern-text);
+  min-width: 0;
   padding: 14px 18px;
+  width: 100%;
 }
 
-.lantern-prompt__input:focus {
+.lantern-prompt__input:focus,
+.lantern-prompt__submit:focus {
   border-color: var(--lantern-accent);
   box-shadow: 0 0 0 3px rgba(196, 139, 68, 0.18);
   outline: none;
+}
+
+.lantern-prompt__submit {
+  background: rgba(196, 139, 68, 0.16);
+  border: 1px solid var(--lantern-border);
+  border-radius: 999px;
+  color: var(--lantern-text);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 14px 18px;
+}
+
+.lantern-prompt__submit:hover {
+  background: rgba(196, 139, 68, 0.28);
 }
 
 .lantern-controls {
@@ -241,6 +260,10 @@ input {
 
   .lantern-prompt__input {
     font-size: 0.95rem;
+    padding: 12px 16px;
+  }
+
+  .lantern-prompt__submit {
     padding: 12px 16px;
   }
 

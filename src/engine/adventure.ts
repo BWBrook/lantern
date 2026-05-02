@@ -57,6 +57,13 @@ export function getArtLabel(
   );
 }
 
+export function getArtAssetPath(
+  adventure: AdventureDefinition,
+  artId: string
+): string | undefined {
+  return adventure.content.art.find((candidate) => candidate.id === artId)?.assetPath;
+}
+
 export function appendTranscript(
   state: GameState,
   kind: "system" | "player",

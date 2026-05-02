@@ -279,12 +279,57 @@ function drawRoom(
   return objects;
 }
 
+function roomArtTextureKey(artId: string): string {
+  return `lantern-room-art:${artId}`;
+}
+
+function drawLoadedRoomArt(
+  scene: Phaser.Scene,
+  textureKey: string
+): Phaser.GameObjects.GameObject[] {
+  const { width, height } = scene.scale;
+  const image = scene.add.image(width / 2, height / 2, textureKey).setOrigin(0.5, 0.5);
+  image.setDisplaySize(width, height);
+
+  const border = scene.add
+    .rectangle(width / 2, height / 2, width - 2, height - 2, 0x000000, 0)
+    .setStrokeStyle(2, 0x120f0c, 0.85);
+
+  return [image, border];
+}
+
 export class GameScene extends Phaser.Scene {
   private readonly unsubscribe: Array<() => void> = [];
   private activeObjects: Phaser.GameObjects.GameObject[] = [];
+  private readonly pendingAssetKeys = new Set<string>();
+  private currentArtKey: string | undefined;
 
   constructor() {
     super(PLACEHOLDER_SCENE_KEY);
+  }
+
+  private queueRoomAssetLoad(
+    textureKey: string,
+    assetPath: string,
+    viewModel: RoomViewModel
+  ): void {
+    if (this.pendingAssetKeys.has(textureKey)) {
+      return;
+    }
+
+    this.pendingAssetKeys.add(textureKey);
+    this.load.image(textureKey, assetPath);
+    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      this.pendingAssetKeys.delete(textureKey);
+
+      if (this.currentArtKey === textureKey && this.textures.exists(textureKey)) {
+        this.renderRoom(viewModel);
+      }
+    });
+
+    if (!this.load.isLoading()) {
+      this.load.start();
+    }
   }
 
   private renderRoom(viewModel: RoomViewModel): void {
@@ -292,6 +337,21 @@ export class GameScene extends Phaser.Scene {
       object.destroy();
     }
 
+    if (viewModel.artAssetPath) {
+      const textureKey = roomArtTextureKey(viewModel.artId);
+      this.currentArtKey = textureKey;
+
+      if (this.textures.exists(textureKey)) {
+        this.activeObjects = drawLoadedRoomArt(this, textureKey);
+        return;
+      }
+
+      this.activeObjects = drawRoom(this, paletteForRoom(viewModel.roomId), viewModel);
+      this.queueRoomAssetLoad(textureKey, viewModel.artAssetPath, viewModel);
+      return;
+    }
+
+    this.currentArtKey = undefined;
     this.activeObjects = drawRoom(this, paletteForRoom(viewModel.roomId), viewModel);
   }
 

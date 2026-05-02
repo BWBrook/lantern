@@ -129,6 +129,7 @@ export interface AdventureActor {
 export interface AdventureArt {
   id: ArtId;
   label: string;
+  assetPath?: string;
 }
 
 export interface AdventureRules {
@@ -237,6 +238,7 @@ export interface RoomViewModel {
   roomId: RoomId;
   artId: ArtId;
   artLabel: string;
+  artAssetPath: string | undefined;
   actorName: string;
   objective: string;
   lampState: string;
