@@ -65,6 +65,11 @@ export function createInitialGameState(
     flags: seed.flags ?? [],
     itemLocations,
     itemStates,
+    parser: {
+      lastIntent: undefined,
+      pendingClarification: undefined,
+      recentObjectIds: []
+    },
     pronouns: {
       it: undefined,
       them: undefined
@@ -187,10 +192,58 @@ export function isItemLocked(
 export function setPronounIt(state: GameState, itemId: string | undefined): GameState {
   return {
     ...state,
+    parser: {
+      ...state.parser,
+      recentObjectIds: itemId ? [itemId] : []
+    },
     pronouns: {
       ...state.pronouns,
       it: itemId,
       them: itemId ? [itemId] : undefined
+    }
+  };
+}
+
+export function setPronounThem(state: GameState, itemIds: string[]): GameState {
+  const uniqueItemIds = [...new Set(itemIds)].filter(Boolean);
+  const firstItemId = uniqueItemIds[0];
+
+  return {
+    ...state,
+    parser: {
+      ...state.parser,
+      recentObjectIds: uniqueItemIds
+    },
+    pronouns: {
+      ...state.pronouns,
+      it: uniqueItemIds.length === 1 ? firstItemId : state.pronouns.it,
+      them: uniqueItemIds.length > 0 ? uniqueItemIds : undefined
+    }
+  };
+}
+
+export function setLastParserIntent(
+  state: GameState,
+  intent: GameState["parser"]["lastIntent"] | undefined
+): GameState {
+  return {
+    ...state,
+    parser: {
+      ...state.parser,
+      lastIntent: intent
+    }
+  };
+}
+
+export function setPendingClarification(
+  state: GameState,
+  pendingClarification: GameState["parser"]["pendingClarification"] | undefined
+): GameState {
+  return {
+    ...state,
+    parser: {
+      ...state.parser,
+      pendingClarification
     }
   };
 }

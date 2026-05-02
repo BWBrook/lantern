@@ -1,0 +1,87 @@
+[
+  {
+    "input": "please take the brass lamp",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "lamp" }]
+  },
+  {
+    "input": "use the crowbar on the boards",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [
+      {
+        "verb": "USE",
+        "actorId": "bram",
+        "directObjectId": "crowbar",
+        "indirectObjectId": "entrance_planks"
+      }
+    ]
+  },
+  {
+    "input": "pry open the mine mouth",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "entrance_planks" }]
+  },
+  {
+    "input": "have Nessa pick the padlock",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "UNLOCK", "actorId": "nessa", "directObjectId": "shed_door" }]
+  },
+  {
+    "input": "grab oil and handle",
+    "currentRoomId": "foreman_shed",
+    "expected": [
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "oil_flask" },
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "winding_handle" }
+    ]
+  },
+  {
+    "input": "fit handle to winch",
+    "currentRoomId": "winch_platform",
+    "inventory": ["winding_handle"],
+    "expected": [
+      {
+        "verb": "ATTACH",
+        "actorId": "bram",
+        "directObjectId": "winding_handle",
+        "indirectObjectId": "winch"
+      }
+    ]
+  },
+  {
+    "input": "work winch",
+    "currentRoomId": "winch_platform",
+    "itemLocations": { "winding_handle": "attached:winch" },
+    "expected": [{ "verb": "TURN", "actorId": "bram", "directObjectId": "winch" }]
+  },
+  {
+    "input": "send Nessa across the ledge",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "shift beam",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "unlock the office with the brass key",
+    "currentRoomId": "stores_chamber",
+    "inventory": ["brass_key"],
+    "flags": ["beam_moved"],
+    "expected": [
+      {
+        "verb": "UNLOCK",
+        "actorId": "bram",
+        "directObjectId": "assay_door",
+        "indirectObjectId": "brass_key"
+      }
+    ]
+  },
+  {
+    "input": "open the way out",
+    "currentRoomId": "vent_crawl",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "vent_grate" }]
+  }
+]

@@ -1,4 +1,4 @@
-export type Direction = "north" | "south" | "east" | "west";
+export type Direction = "north" | "south" | "east" | "west" | "up" | "down" | "in" | "out";
 
 export type RoomId = string;
 export type ItemId = string;
@@ -67,13 +67,36 @@ export interface AdventureTheme {
   textColor: string;
 }
 
+export type ParseConfidence = "exact" | "likely" | "low";
+
+export interface DictionaryAliasEntry {
+  aliases?: string[];
+  nouns?: string[];
+  adjectives?: string[];
+  pronouns?: string[];
+}
+
+export type DictionaryAliasSpec = string[] | DictionaryAliasEntry;
+
+export interface AdventureCommandTemplate {
+  verb: CanonicalVerb;
+  actor?: string;
+  directObject?: string;
+  indirectObject?: string;
+  preposition?: string;
+  confidence?: ParseConfidence;
+}
+
 export interface AdventureDictionary {
   verbs: Partial<Record<CanonicalVerb, string[]>>;
   directions: Partial<Record<Direction, string[]>>;
-  actors: Partial<Record<ActorId, string[]>>;
-  items: Partial<Record<ItemId, string[]>>;
+  actors: Partial<Record<ActorId, DictionaryAliasSpec>>;
+  items: Partial<Record<ItemId, DictionaryAliasSpec>>;
   groups?: Record<string, string[]>;
+  noiseWords?: string[];
   stopWords?: string[];
+  idioms?: Record<string, AdventureCommandTemplate>;
+  commandTemplates?: Record<string, AdventureCommandTemplate>;
   phraseAliases?: Record<string, CanonicalVerb>;
 }
 
@@ -171,6 +194,8 @@ export interface Intent {
   indirectObject: string | undefined;
   preposition: string | undefined;
   raw: string;
+  confidence?: ParseConfidence;
+  normalized?: string;
 }
 
 export interface ResolvedIntent {
@@ -179,6 +204,33 @@ export interface ResolvedIntent {
   directObjectId: string | undefined;
   indirectObjectId: string | undefined;
   preposition: string | undefined;
+  raw: string;
+  confidence?: ParseConfidence;
+  normalized?: string;
+}
+
+export interface PendingClarification {
+  originalRaw: string;
+  intent: Intent;
+  objectRole: "directObject" | "indirectObject";
+  candidateIds: ItemId[];
+}
+
+export interface ParserContext {
+  lastIntent: ResolvedIntent | undefined;
+  pendingClarification: PendingClarification | undefined;
+  recentObjectIds: string[];
+}
+
+export interface AtomicCommand {
+  confidence: ParseConfidence;
+  intent: ResolvedIntent;
+  normalized: string;
+  source: string;
+}
+
+export interface CommandPlan {
+  commands: AtomicCommand[];
   raw: string;
 }
 
@@ -190,6 +242,7 @@ export interface GameState {
   flags: FlagId[];
   itemLocations: Record<ItemId, ItemLocation>;
   itemStates: Record<ItemId, ItemRuntimeState>;
+  parser: ParserContext;
   pronouns: PronounState;
   visitCounts: Record<RoomId, number>;
   transcript: TranscriptLine[];

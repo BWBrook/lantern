@@ -161,14 +161,20 @@ function inspectPhrase(
   };
 }
 
-function throwAmbiguous(phrase: string, candidates: Array<{ name: string }>): never {
+function throwAmbiguous(
+  phrase: string,
+  candidates: Array<{ id: string; name: string }>,
+  objectRole: "directObject" | "indirectObject"
+): never {
   const names = candidates.map((candidate) => candidate.name.toLowerCase());
 
   throw new ParserDiagnosticError(
     {
       code: "ambiguous_noun",
+      candidateIds: candidates.map((candidate) => candidate.id),
       candidates: names,
-      nounPhrase: phrase
+      nounPhrase: phrase,
+      objectRole
     },
     `Which ${phrase.toLowerCase()} do you mean: ${formatList(names)}?`
   );
@@ -233,11 +239,12 @@ function resolvePronoun(state: GameState, phrase: string): string | undefined {
   return undefined;
 }
 
-function resolveObjectId(
+export function resolveObjectId(
   adventure: AdventureDefinition,
   state: GameState,
   phrase: string | undefined,
-  allowActorTargets: boolean
+  allowActorTargets: boolean,
+  objectRole: "directObject" | "indirectObject" = "directObject"
 ): string | undefined {
   if (!phrase) {
     return undefined;
@@ -255,7 +262,7 @@ function resolveObjectId(
   const exactRoomItems = exactItemMatches(adventure, inspection.roomItems, normalized);
 
   if (exactRoomItems.length > 1) {
-    throwAmbiguous(phrase, exactRoomItems);
+    throwAmbiguous(phrase, exactRoomItems, objectRole);
   }
 
   if (exactRoomItems.length === 1) {
@@ -265,7 +272,7 @@ function resolveObjectId(
   const exactInventoryItems = exactItemMatches(adventure, inspection.inventoryItems, normalized);
 
   if (exactInventoryItems.length > 1) {
-    throwAmbiguous(phrase, exactInventoryItems);
+    throwAmbiguous(phrase, exactInventoryItems, objectRole);
   }
 
   if (exactInventoryItems.length === 1) {
@@ -276,7 +283,7 @@ function resolveObjectId(
     const exactActors = exactActorMatches(adventure, inspection.visibleActors, normalized);
 
     if (exactActors.length > 1) {
-      throwAmbiguous(phrase, exactActors);
+      throwAmbiguous(phrase, exactActors, objectRole);
     }
 
     if (exactActors.length === 1) {
@@ -285,7 +292,7 @@ function resolveObjectId(
   }
 
   if (inspection.visibleGroupItems.length > 1) {
-    throwAmbiguous(phrase, inspection.visibleGroupItems);
+    throwAmbiguous(phrase, inspection.visibleGroupItems, objectRole);
   }
 
   if (inspection.visibleGroupItems.length === 1) {
@@ -296,7 +303,7 @@ function resolveObjectId(
     const roomSubset = subsetItemMatches(adventure, inspection.roomItems, queryTokens);
 
     if (roomSubset.length > 1) {
-      throwAmbiguous(phrase, roomSubset);
+      throwAmbiguous(phrase, roomSubset, objectRole);
     }
 
     if (roomSubset.length === 1) {
@@ -306,7 +313,7 @@ function resolveObjectId(
     const inventorySubset = subsetItemMatches(adventure, inspection.inventoryItems, queryTokens);
 
     if (inventorySubset.length > 1) {
-      throwAmbiguous(phrase, inventorySubset);
+      throwAmbiguous(phrase, inventorySubset, objectRole);
     }
 
     if (inventorySubset.length === 1) {
@@ -317,7 +324,7 @@ function resolveObjectId(
       const actorSubset = subsetActorMatches(adventure, inspection.visibleActors, queryTokens);
 
       if (actorSubset.length > 1) {
-        throwAmbiguous(phrase, actorSubset);
+        throwAmbiguous(phrase, actorSubset, objectRole);
       }
 
       if (actorSubset.length === 1) {
@@ -455,7 +462,7 @@ export function resolveIntent(
       );
     }
 
-    return {
+    const resolved: ResolvedIntent = {
       verb: intent.verb,
       actorId,
       directObjectId: actorId,
@@ -463,23 +470,43 @@ export function resolveIntent(
       preposition: undefined,
       raw: intent.raw
     };
+
+    if (intent.confidence) {
+      resolved.confidence = intent.confidence;
+    }
+
+    if (intent.normalized) {
+      resolved.normalized = intent.normalized;
+    }
+
+    return resolved;
   }
 
   const actorId = intent.actorId ?? state.activeActorId;
   const allowActorTargets = intent.verb === "EXAMINE";
 
-  return {
+  const resolved: ResolvedIntent = {
     verb: intent.verb,
     actorId,
     directObjectId:
       intent.verb === "GO"
         ? intent.directObject
-        : resolveObjectId(adventure, state, intent.directObject, allowActorTargets),
+        : resolveObjectId(adventure, state, intent.directObject, allowActorTargets, "directObject"),
     indirectObjectId:
       intent.verb === "GO"
         ? undefined
-        : resolveObjectId(adventure, state, intent.indirectObject, false),
+        : resolveObjectId(adventure, state, intent.indirectObject, false, "indirectObject"),
     preposition: intent.preposition,
     raw: intent.raw
   };
+
+  if (intent.confidence) {
+    resolved.confidence = intent.confidence;
+  }
+
+  if (intent.normalized) {
+    resolved.normalized = intent.normalized;
+  }
+
+  return resolved;
 }

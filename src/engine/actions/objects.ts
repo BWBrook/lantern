@@ -366,6 +366,23 @@ export function handleObjectAction(
         return { state, messages: ["You cannot see that here."] };
       }
 
+      if (intent.verb === "USE" && intent.indirectObjectId) {
+        const targetItem = getItemById(adventure, intent.indirectObjectId);
+
+        if (!canReachItem(adventure, state, targetItem.id)) {
+          return { state, messages: ["You cannot see what you are trying to use it on."] };
+        }
+
+        const targetHook =
+          executeItemHook(adventure, state, intent, targetItem, "use") ??
+          executeItemHook(adventure, state, intent, targetItem, "move") ??
+          executeItemHook(adventure, state, intent, targetItem, "open");
+
+        if (targetHook) {
+          return targetHook;
+        }
+      }
+
       const hookName = intent.verb === "TURN" ? "turn" : intent.verb === "CROSS" ? "cross" : "use";
       const hookResult = executeItemHook(adventure, state, intent, item, hookName);
 

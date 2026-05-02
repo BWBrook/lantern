@@ -50,7 +50,12 @@ Every location is a named room with authored text, state, exits, and one illustr
 
 ### 3. The parser is constrained English
 
-The parser should understand a small, explicit grammar and a well-maintained thesaurus of synonyms. It should not attempt general semantic chat. Better to parse thirty verbs well than pretend to parse everything badly.
+The parser should understand an explicit deterministic grammar and a
+well-maintained adventure dictionary. Parser V3 can feel near-NLP by accepting
+polite fillers, reordered prepositions, command chains, `ALL`/`EXCEPT`,
+`AGAIN`, and clarification follow-ups, but it should not attempt general
+semantic chat. Better to parse many physical adventure commands reliably than
+pretend to parse everything badly.
 
 ### 4. The world model comes before polish
 
@@ -113,10 +118,9 @@ The parser should recognize:
 
 Support `IT` and `THEM` at minimum. If simple actor pronouns (`HER`, `HIM`) are easy to add cleanly, that is welcome, but not required for prototype completeness.
 
-### Explicitly out of scope for MVP
+### Explicitly out of scope
 
 - open-ended dialogue parsing
-- multi-command chaining such as `take lamp then light it`
 - full sentence conjunction logic
 - combat parser
 - fuzzy natural language as a chat experience

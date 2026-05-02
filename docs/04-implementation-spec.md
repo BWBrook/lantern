@@ -364,6 +364,35 @@ adventure to extend vocabulary cleanly.
 - parser errors are understandable and not just raw exceptions
 - the parser remains Lantern-owned rather than adventure-specific
 
+## Work package 2b — Parser V3 near-NLP classic parser pass
+
+### Goal
+
+Make Lantern feel much closer to a mature illustrated-parser adventure while
+remaining deterministic, offline, and engine-owned.
+
+### Tasks
+
+- Add command-plan parsing so one input can compile to one or more canonical
+  intents.
+- Support polite fillers, gerunds, richer actor direction, reordered
+  prepositions, noun lists, `ALL`/`EXCEPT`, `AGAIN`, and clarification
+  follow-ups.
+- Extend parser context in game state for last-command repeat, recent objects,
+  batch-aware `THEM`, and pending disambiguation.
+- Allow richer adventure dictionary entries with aliases, nouns, adjectives,
+  actor pronouns, noise words, and exact idiom templates.
+- Expand Harrow's parser-facing dictionary and maintain a parser phrase corpus
+  beside the golden path.
+
+### Definition of done
+
+- existing golden-path commands still work
+- near-NLP Harrow phrase corpus parses to expected canonical intents
+- ambiguous visible nouns can be clarified with a short follow-up
+- likely non-exact parses disclose `I read that as: ...` before executing
+- broad unsafe batch commands ask for specificity instead of guessing
+
 ## Work package 3 — Generic world state, action validation, and hook API
 
 ### Goal

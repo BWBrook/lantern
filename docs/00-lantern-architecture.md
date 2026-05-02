@@ -216,17 +216,21 @@ Bad examples:
 ## Parser and Lexicon Policy
 
 Lantern owns the parser grammar and canonical intent model. Adventures do not
-get to redefine sentence structure in v1.
+get to redefine sentence structure.
 
 Adventures do get to extend the surface vocabulary by supplying:
 
 - actor names and aliases
-- object aliases and adjectives
+- object aliases, nouns, adjectives, and actor pronoun aliases
 - synonym maps that normalize local phrasing onto Lantern's canonical verbs
+- exact idiom/template phrases that compile to canonical intents
 - direction aliases or local naming if needed
 
 This keeps the parser reusable while still allowing adventures to sound like
-themselves.
+themselves. Parser V3 may accept near-NLP surface phrasing, command chains,
+`ALL`/`EXCEPT`, `AGAIN`, and clarification follow-ups, but it remains
+deterministic: every accepted command must compile to one or more canonical
+intents before world state changes.
 
 ## Save/Load Policy
 

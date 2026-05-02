@@ -1,8 +1,10 @@
 import type {
   ActorId,
+  AdventureCommandTemplate,
   AdventureDefinition,
   AdventureDictionary,
   CanonicalVerb,
+  DictionaryAliasSpec,
   Direction,
   ItemId
 } from "../types";
@@ -15,51 +17,76 @@ export interface CompiledAdventureDictionary {
   groupAliasToIds: Map<string, ItemId[]>;
   itemAliasToIds: Map<string, ItemId[]>;
   itemPhrasesById: Map<ItemId, string[]>;
+  commandTemplates: Array<{ alias: string; template: AdventureCommandTemplate; tokens: string[] }>;
+  noiseWords: Set<string>;
   phraseAliases: Array<{ alias: string; tokens: string[]; verb: CanonicalVerb }>;
   stopWords: Set<string>;
   verbAliases: Map<string, CanonicalVerb>;
 }
 
 const DEFAULT_STOP_WORDS = ["a", "an", "the"];
+const DEFAULT_NOISE_WORDS = [
+  "kindly",
+  "now",
+  "ok",
+  "okay",
+  "please",
+  "try"
+];
 
 const BASE_VERB_ALIASES: Partial<Record<CanonicalVerb, string[]>> = {
-  ATTACH: ["attach"],
+  ATTACH: ["attach", "fit", "insert", "place", "put", "slot"],
   CLOSE: ["close", "shut"],
-  CROSS: ["cross"],
-  DROP: ["drop", "leave"],
-  EXAMINE: ["examine", "inspect", "x"],
-  EXTINGUISH: ["extinguish", "douse"],
-  GO: ["go", "walk"],
+  CROSS: ["cross", "traverse"],
+  DROP: ["drop", "discard", "leave", "put down"],
+  EXAMINE: ["check", "describe", "examine", "inspect", "study", "x"],
+  EXTINGUISH: ["douse", "extinguish", "put out", "snuff"],
+  GO: ["enter", "go", "head", "leave", "walk"],
   HELP: ["help"],
   INVENTORY: ["inventory", "inv", "i"],
-  LIGHT: ["light", "ignite"],
+  LIGHT: ["ignite", "light", "oil"],
   LOAD: ["load", "restore"],
   LOOK: ["look", "l"],
-  MOVE: ["move", "pry", "shift"],
-  OPEN: ["open"],
-  PULL: ["pull"],
-  PUSH: ["push"],
+  MOVE: ["force", "move", "pry", "shift"],
+  OPEN: ["open", "unbar", "uncover"],
+  PULL: ["drag", "haul", "pull"],
+  PUSH: ["press", "push", "shove"],
   SAVE: ["save"],
-  SEARCH: ["search"],
+  SEARCH: ["search", "look in", "look inside", "rummage"],
   SWITCH_ACTOR: ["be"],
-  TAKE: ["take", "get"],
-  TURN: ["turn"],
-  UNLOCK: ["unlock", "pick"],
-  USE: ["use"],
+  TAKE: ["get", "grab", "pick up", "take"],
+  TURN: ["operate", "turn", "work"],
+  UNLOCK: ["pick", "unlock"],
+  USE: ["apply", "use"],
   WAIT: ["wait", "z"]
 };
 
 const BASE_DIRECTION_ALIASES: Partial<Record<Direction, string[]>> = {
+  down: ["down", "d"],
   east: ["east", "e"],
+  in: ["in", "inside"],
   north: ["north", "n"],
+  out: ["out", "outside"],
   south: ["south", "s"],
+  up: ["up", "u"],
   west: ["west", "w"]
 };
 
 const BASE_PHRASE_ALIASES: Record<string, CanonicalVerb> = {
   "look at": "EXAMINE",
+  "look in": "SEARCH",
+  "look inside": "SEARCH",
   "pick up": "TAKE",
+  "put out": "EXTINGUISH",
+  "pry open": "MOVE",
   "turn on": "LIGHT"
+};
+
+const BASE_COMMAND_TEMPLATES: Record<string, AdventureCommandTemplate> = {
+  "look around": { verb: "LOOK" },
+  "look": { verb: "LOOK" },
+  "what am i carrying": { verb: "INVENTORY" },
+  "what have i got": { verb: "INVENTORY" }
 };
 
 const cache = new WeakMap<AdventureDefinition, CompiledAdventureDictionary>();
@@ -74,6 +101,27 @@ function appendAlias<T extends string>(map: Map<string, T[]>, alias: string, tar
   if (!existing.includes(target)) {
     map.set(alias, [...existing, target]);
   }
+}
+
+export function expandDictionaryAliasSpec(spec: DictionaryAliasSpec | undefined): string[] {
+  if (!spec) {
+    return [];
+  }
+
+  if (Array.isArray(spec)) {
+    return spec;
+  }
+
+  const nouns = spec.nouns ?? [];
+  const adjectives = spec.adjectives ?? [];
+  const adjectiveNouns = nouns.flatMap((noun) => adjectives.map((adjective) => `${adjective} ${noun}`));
+
+  return [
+    ...(spec.aliases ?? []),
+    ...nouns,
+    ...adjectiveNouns,
+    ...(spec.pronouns ?? [])
+  ];
 }
 
 function addCanonicalAliases<T extends string>(
@@ -127,6 +175,30 @@ function compilePhraseAliases(dictionary: AdventureDictionary): CompiledAdventur
     .sort((left, right) => right.tokens.length - left.tokens.length);
 }
 
+function compileCommandTemplates(dictionary: AdventureDictionary): CompiledAdventureDictionary["commandTemplates"] {
+  const merged = new Map<string, AdventureCommandTemplate>();
+
+  for (const [alias, template] of Object.entries(BASE_COMMAND_TEMPLATES)) {
+    merged.set(normalizeDictionaryPhrase(alias), template);
+  }
+
+  for (const [alias, template] of Object.entries(dictionary.idioms ?? {})) {
+    merged.set(normalizeDictionaryPhrase(alias), template);
+  }
+
+  for (const [alias, template] of Object.entries(dictionary.commandTemplates ?? {})) {
+    merged.set(normalizeDictionaryPhrase(alias), template);
+  }
+
+  return [...merged.entries()]
+    .map(([alias, template]) => ({
+      alias,
+      template,
+      tokens: alias.split(" ")
+    }))
+    .sort((left, right) => right.tokens.length - left.tokens.length);
+}
+
 export function normalizeDictionaryPhrase(value: string): string {
   return value
     .replace(/[’‘]/g, "'")
@@ -144,7 +216,7 @@ function collectItemPhrases(adventure: AdventureDefinition, itemId: ItemId): str
     return [];
   }
 
-  const configured = adventure.dictionary.items[item.id] ?? [];
+  const configured = expandDictionaryAliasSpec(adventure.dictionary.items[item.id]);
   const inline = item.aliases ?? [];
 
   return uniq(
@@ -161,7 +233,7 @@ function collectActorPhrases(adventure: AdventureDefinition, actorId: ActorId): 
     return [];
   }
 
-  const configured = adventure.dictionary.actors[actor.id] ?? [];
+  const configured = expandDictionaryAliasSpec(adventure.dictionary.actors[actor.id]);
   const inline = actor.aliases ?? [];
 
   return uniq(
@@ -182,10 +254,14 @@ export function getCompiledDictionary(
 
   const actorAliasToIds = new Map<string, ActorId[]>();
   const actorPhrasesById = new Map<ActorId, string[]>();
+  const commandTemplates = compileCommandTemplates(adventure.dictionary);
   const directionAliases = mergeDirectionAliases(adventure.dictionary);
   const groupAliasToIds = new Map<string, ItemId[]>();
   const itemAliasToIds = new Map<string, ItemId[]>();
   const itemPhrasesById = new Map<ItemId, string[]>();
+  const noiseWords = new Set(
+    uniq([...DEFAULT_NOISE_WORDS, ...(adventure.dictionary.noiseWords ?? [])]).map(normalizeDictionaryPhrase)
+  );
   const phraseAliases = compilePhraseAliases(adventure.dictionary);
   const stopWords = new Set(
     uniq([...DEFAULT_STOP_WORDS, ...(adventure.dictionary.stopWords ?? [])]).map(normalizeDictionaryPhrase)
@@ -218,17 +294,21 @@ export function getCompiledDictionary(
 
   const commandWords = new Set<string>([
     ...verbAliases.keys(),
-    ...directionAliases.keys()
+    ...directionAliases.keys(),
+    ...commandTemplates.flatMap((template) => template.tokens),
+    ...phraseAliases.flatMap((phrase) => phrase.tokens)
   ]);
 
   const compiled = {
     actorAliasToIds,
     actorPhrasesById,
     commandWords,
+    commandTemplates,
     directionAliases,
     groupAliasToIds,
     itemAliasToIds,
     itemPhrasesById,
+    noiseWords,
     phraseAliases,
     stopWords,
     verbAliases

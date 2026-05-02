@@ -37,5 +37,12 @@ export function loadGame(
     throw new Error("Save data belongs to a different adventure.");
   }
 
-  return parsed.state;
+  return {
+    ...parsed.state,
+    parser: parsed.state.parser ?? {
+      lastIntent: undefined,
+      pendingClarification: undefined,
+      recentObjectIds: []
+    }
+  };
 }

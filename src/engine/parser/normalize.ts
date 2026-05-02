@@ -1,4 +1,4 @@
-import type { Intent } from "../types";
+import type { Intent, ParseConfidence } from "../types";
 import type { CompiledAdventureDictionary } from "./dictionary";
 import { normalizeDictionaryPhrase } from "./dictionary";
 import { ParserDiagnosticError } from "./diagnostics";
@@ -10,6 +10,7 @@ const PREPOSITIONS = new Set([
   "in",
   "into",
   "on",
+  "onto",
   "through",
   "to",
   "using",
@@ -17,7 +18,9 @@ const PREPOSITIONS = new Set([
 ]);
 
 function stripStopWords(tokens: string[], dictionary: CompiledAdventureDictionary): string[] {
-  return tokens.filter((token) => token === "," || !dictionary.stopWords.has(token));
+  return tokens.filter(
+    (token) => token === "," || (!dictionary.stopWords.has(token) && !dictionary.noiseWords.has(token))
+  );
 }
 
 function getSingleActorId(
@@ -47,8 +50,134 @@ function splitPreposition(tokens: string[]): {
   return {
     direct: tokens.slice(0, index),
     indirect: tokens.slice(index + 1),
-    preposition: tokens[index]
+    preposition: tokens[index] === "onto" ? "on" : tokens[index]
   };
+}
+
+function stripSentenceWrapper(tokens: string[]): { confidence: ParseConfidence | undefined; tokens: string[] } {
+  const wrapperPatterns = [
+    ["i", "want", "to"],
+    ["i", "would", "like", "to"],
+    ["i", "need", "to"],
+    ["can", "you"],
+    ["could", "you"],
+    ["would", "you"]
+  ];
+
+  for (const pattern of wrapperPatterns) {
+    if (pattern.every((token, index) => tokens[index] === token) && tokens.length > pattern.length) {
+      return {
+        confidence: "likely",
+        tokens: tokens.slice(pattern.length)
+      };
+    }
+  }
+
+  return { confidence: undefined, tokens };
+}
+
+function normalizeGerund(token: string): string {
+  const gerunds: Record<string, string> = {
+    applying: "use",
+    attaching: "attach",
+    closing: "close",
+    crossing: "cross",
+    dropping: "drop",
+    entering: "go",
+    examining: "examine",
+    fitting: "fit",
+    forcing: "force",
+    getting: "get",
+    going: "go",
+    grabbing: "grab",
+    igniting: "ignite",
+    inserting: "insert",
+    lighting: "light",
+    looking: "look",
+    moving: "move",
+    opening: "open",
+    picking: "pick",
+    placing: "place",
+    prying: "pry",
+    pulling: "pull",
+    pushing: "push",
+    searching: "search",
+    shifting: "shift",
+    taking: "take",
+    turning: "turn",
+    unlocking: "unlock",
+    using: "use",
+    walking: "walk",
+    working: "work"
+  };
+
+  return gerunds[token] ?? token;
+}
+
+function normalizeIntentLabel(
+  verb: string,
+  directObject: string | undefined,
+  preposition: string | undefined,
+  indirectObject: string | undefined
+): string {
+  return [verb, directObject, preposition, indirectObject]
+    .filter(Boolean)
+    .join(" ")
+    .toUpperCase();
+}
+
+function intentFromParts(
+  verb: Intent["verb"],
+  actorId: string | undefined,
+  directObject: string | undefined,
+  preposition: string | undefined,
+  indirectObject: string | undefined,
+  raw: string,
+  confidence: ParseConfidence | undefined
+): Intent {
+  const intent: Intent = {
+    verb,
+    actorId,
+    directObject,
+    indirectObject,
+    preposition,
+    raw
+  };
+
+  if (confidence) {
+    intent.confidence = confidence;
+    intent.normalized = normalizeIntentLabel(verb, directObject, preposition, indirectObject);
+  }
+
+  return intent;
+}
+
+function matchCommandTemplate(
+  tokens: string[],
+  dictionary: CompiledAdventureDictionary,
+  raw: string,
+  confidence: ParseConfidence | undefined
+): Intent | undefined {
+  const normalized = tokens.join(" ");
+  const match = dictionary.commandTemplates.find((template) => template.alias === normalized);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const actorId = match.template.actor
+    ? getSingleActorId(normalizeDictionaryPhrase(match.template.actor), dictionary)
+    : undefined;
+
+  return intentFromParts(
+    match.template.verb,
+    actorId,
+    match.template.directObject,
+    match.template.preposition,
+    match.template.indirectObject,
+    raw,
+    match.template.confidence ?? confidence
+  );
 }
 
 function levenshteinDistance(left: string, right: string): number {
@@ -144,7 +273,10 @@ export function normalizeTokens(
   rawTokens: string[],
   dictionary: CompiledAdventureDictionary
 ): Intent {
-  const tokens = stripStopWords(rawTokens, dictionary);
+  const stripped = stripStopWords(rawTokens, dictionary);
+  const wrapper = stripSentenceWrapper(stripped);
+  const tokens = wrapper.tokens;
+  let confidence = wrapper.confidence;
 
   if (tokens.length === 0) {
     throw new ParserDiagnosticError({ code: "incomplete_command" });
@@ -152,6 +284,12 @@ export function normalizeTokens(
 
   let actorId: string | undefined;
   let working = [...tokens];
+  let templateMatch = matchCommandTemplate(working, dictionary, working.join(" "), confidence);
+
+  if (templateMatch) {
+    return templateMatch;
+  }
+
   const firstToken = working[0];
   const secondToken = working[1];
   const thirdToken = working[2];
@@ -160,13 +298,32 @@ export function normalizeTokens(
     actorId = getSingleActorId(firstToken, dictionary);
     working = working.slice(2);
   } else if (
-    firstToken === "tell" &&
+    ["ask", "have", "order", "tell"].includes(firstToken ?? "") &&
     secondToken &&
     getSingleActorId(secondToken, dictionary) &&
-    thirdToken === "to"
+    (thirdToken === "to" || firstToken !== "tell")
   ) {
     actorId = getSingleActorId(secondToken, dictionary);
-    working = working.slice(3);
+    working = working.slice(thirdToken === "to" ? 3 : 2);
+    confidence ??= "likely";
+  } else if (
+    firstToken === "send" &&
+    secondToken &&
+    getSingleActorId(secondToken, dictionary) &&
+    thirdToken === "across"
+  ) {
+    actorId = getSingleActorId(secondToken, dictionary);
+    working = ["cross", ...working.slice(3)];
+    confidence ??= "likely";
+  } else if (
+    firstToken &&
+    secondToken &&
+    getSingleActorId(firstToken, dictionary) &&
+    (dictionary.verbAliases.has(normalizeGerund(secondToken)) || dictionary.directionAliases.has(secondToken))
+  ) {
+    actorId = getSingleActorId(firstToken, dictionary);
+    working = working.slice(1);
+    confidence ??= "likely";
   }
 
   const raw = working.join(" ");
@@ -175,17 +332,19 @@ export function normalizeTokens(
     throw new ParserDiagnosticError({ code: "incomplete_command" });
   }
 
+  templateMatch = matchCommandTemplate(working, dictionary, raw, confidence);
+
+  if (templateMatch) {
+    return {
+      ...templateMatch,
+      actorId: templateMatch.actorId ?? actorId
+    };
+  }
+
   const soleToken = working[0];
 
   if (working.length === 1 && soleToken && getSingleActorId(soleToken, dictionary)) {
-    return {
-      verb: "SWITCH_ACTOR",
-      actorId: undefined,
-      directObject: soleToken,
-      indirectObject: undefined,
-      preposition: undefined,
-      raw
-    };
+    return intentFromParts("SWITCH_ACTOR", undefined, soleToken, undefined, undefined, raw, confidence);
   }
 
   const phraseMatch = matchLeadingPhrase(working, dictionary);
@@ -194,29 +353,35 @@ export function normalizeTokens(
     const remainder = working.slice(phraseMatch.consumed);
 
     if (phraseMatch.verb === "SWITCH_ACTOR") {
-      return {
-        verb: phraseMatch.verb,
-        actorId: undefined,
-        directObject: remainder.join(" ") || undefined,
-        indirectObject: undefined,
-        preposition: undefined,
-        raw
-      };
+      return intentFromParts(
+        phraseMatch.verb,
+        undefined,
+        remainder.join(" ") || undefined,
+        undefined,
+        undefined,
+        raw,
+        confidence
+      );
     }
 
     const split = splitPreposition(remainder);
 
-    return {
-      verb: phraseMatch.verb,
+    return intentFromParts(
+      phraseMatch.verb,
       actorId,
-      directObject: split.direct.join(" ") || undefined,
-      indirectObject: split.indirect.join(" ") || undefined,
-      preposition: split.preposition,
-      raw
-    };
+      split.direct.join(" ") || undefined,
+      split.preposition,
+      split.indirect.join(" ") || undefined,
+      raw,
+      confidence
+    );
   }
 
-  const commandHead = working[0];
+  const originalCommandHead = working[0];
+  const commandHead = originalCommandHead ? normalizeGerund(originalCommandHead) : undefined;
+  if (commandHead && originalCommandHead && commandHead !== originalCommandHead) {
+    confidence ??= "likely";
+  }
 
   if (!commandHead) {
     throw new ParserDiagnosticError({ code: "incomplete_command" });
@@ -225,14 +390,7 @@ export function normalizeTokens(
   const direction = dictionary.directionAliases.get(commandHead);
 
   if (direction) {
-    return {
-      verb: "GO",
-      actorId,
-      directObject: direction,
-      indirectObject: undefined,
-      preposition: undefined,
-      raw
-    };
+    return intentFromParts("GO", actorId, direction, undefined, undefined, raw, confidence);
   }
 
   const verb = dictionary.verbAliases.get(commandHead);
@@ -266,31 +424,43 @@ export function normalizeTokens(
   const remainder = working.slice(1);
 
   if (verb === "SWITCH_ACTOR") {
-    return {
+    return intentFromParts(
       verb,
-      actorId: undefined,
-      directObject: remainder.join(" ") || undefined,
-      indirectObject: undefined,
-      preposition: undefined,
-      raw
-    };
+      undefined,
+      remainder.join(" ") || undefined,
+      undefined,
+      undefined,
+      raw,
+      confidence
+    );
   }
 
   const split = splitPreposition(remainder);
+  let direct = split.direct;
+  let indirect = split.indirect;
+  let preposition = split.preposition;
 
-  if (verb === "UNLOCK" && split.preposition === "with" && (!split.direct.length || !split.indirect.length)) {
+  if (verb === "GO" && direct.length === 0 && indirect.length > 0) {
+    direct = indirect;
+    indirect = [];
+    preposition = undefined;
+    confidence ??= "likely";
+  }
+
+  if (verb === "UNLOCK" && preposition === "with" && (!direct.length || !indirect.length)) {
     throw new ParserDiagnosticError({
-      code: !split.direct.length ? "missing_direct_object" : "missing_indirect_object",
+      code: !direct.length ? "missing_direct_object" : "missing_indirect_object",
       verb
     });
   }
 
-  return {
+  return intentFromParts(
     verb,
     actorId,
-    directObject: split.direct.join(" ") || undefined,
-    indirectObject: split.indirect.join(" ") || undefined,
-    preposition: split.preposition,
-    raw
-  };
+    direct.join(" ") || undefined,
+    preposition,
+    indirect.join(" ") || undefined,
+    raw,
+    confidence
+  );
 }

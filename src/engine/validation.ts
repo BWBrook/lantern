@@ -1,9 +1,11 @@
 import type {
   AdventureDefinition,
   AdventureItem,
+  CanonicalVerb,
   ItemActionHookName,
   ValidationIssue
 } from "./types";
+import { expandDictionaryAliasSpec } from "./parser/dictionary";
 
 function findDuplicates(values: string[]): string[] {
   const seen = new Set<string>();
@@ -112,11 +114,11 @@ function validateDictionary(
   const aliasPairs: Array<[string, string[]]> = [];
 
   for (const [actorId, aliases] of Object.entries(adventure.dictionary.actors)) {
-    aliasPairs.push(...(aliases ?? []).map((alias) => [alias, [`actor:${actorId}`]] as [string, string[]]));
+    aliasPairs.push(...expandDictionaryAliasSpec(aliases).map((alias) => [alias, [`actor:${actorId}`]] as [string, string[]]));
   }
 
   for (const [itemId, aliases] of Object.entries(adventure.dictionary.items)) {
-    aliasPairs.push(...(aliases ?? []).map((alias) => [alias, [`item:${itemId}`]] as [string, string[]]));
+    aliasPairs.push(...expandDictionaryAliasSpec(aliases).map((alias) => [alias, [`item:${itemId}`]] as [string, string[]]));
   }
 
   for (const item of adventure.content.items) {
@@ -144,6 +146,46 @@ function validateDictionary(
         scope: "metadata",
         id: alias,
         message: `Alias "${alias}" is declared for multiple targets (${[...owners].join(", ")}). Prefer dictionary groups for shared nouns.`
+      });
+    }
+  }
+
+  const canonicalVerbs = new Set<CanonicalVerb>([
+    "ATTACH",
+    "CLOSE",
+    "CROSS",
+    "DROP",
+    "EXAMINE",
+    "EXTINGUISH",
+    "GO",
+    "HELP",
+    "INVENTORY",
+    "LIGHT",
+    "LOAD",
+    "LOOK",
+    "MOVE",
+    "OPEN",
+    "PULL",
+    "PUSH",
+    "SAVE",
+    "SEARCH",
+    "SWITCH_ACTOR",
+    "TAKE",
+    "TURN",
+    "UNLOCK",
+    "USE",
+    "WAIT"
+  ]);
+
+  for (const [alias, template] of Object.entries({
+    ...(adventure.dictionary.idioms ?? {}),
+    ...(adventure.dictionary.commandTemplates ?? {})
+  })) {
+    if (!canonicalVerbs.has(template.verb)) {
+      issues.push({
+        scope: "metadata",
+        id: alias,
+        message: `Dictionary command template "${alias}" references unknown verb "${template.verb}".`
       });
     }
   }

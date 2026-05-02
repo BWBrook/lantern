@@ -8,6 +8,7 @@ import {
   setItemLocation,
   setPronounIt
 } from "../../src/engine/state";
+import { runTurn } from "../../src/engine/turn";
 import tinyAdventure from "../fixtures/tiny_adventure/adventure";
 
 function resolve(input: string, state = createInitialGameState(harrowMineAdventure)) {
@@ -114,5 +115,111 @@ describe("parser v2", () => {
     expect(() => resolve("EXAMINE LOCKBOX")).toThrowError(
       "You know about paymaster's lockbox, but you cannot see it here."
     );
+  });
+});
+
+describe("parser v3", () => {
+  it("accepts polite fillers, gerunds, reordered prepositions, and richer actor direction", () => {
+    const yard = setCurrentRoom(createInitialGameState(harrowMineAdventure), "loading_yard");
+    const entrance = setItemLocation(
+      setCurrentRoom(createInitialGameState(harrowMineAdventure), "broken_entrance"),
+      "crowbar",
+      "inventory"
+    );
+    const winch = setItemLocation(
+      setCurrentRoom(createInitialGameState(harrowMineAdventure), "winch_platform"),
+      "winding_handle",
+      "inventory"
+    );
+
+    expect(resolve("try opening the shed", yard)).toMatchObject({
+      directObjectId: "shed_door",
+      verb: "OPEN"
+    });
+    expect(resolve("use the crowbar on the planks", entrance)).toMatchObject({
+      directObjectId: "crowbar",
+      indirectObjectId: "entrance_planks",
+      preposition: "on",
+      verb: "USE"
+    });
+    expect(resolve("put the handle on the winch", winch)).toMatchObject({
+      directObjectId: "winding_handle",
+      indirectObjectId: "winch",
+      preposition: "on",
+      verb: "ATTACH"
+    });
+    expect(resolve("have Nessa pick the lock", yard)).toMatchObject({
+      actorId: "nessa",
+      directObjectId: "shed_door",
+      verb: "UNLOCK"
+    });
+  });
+
+  it("executes command chains in order and remembers AGAIN", () => {
+    let state = createInitialGameState(harrowMineAdventure);
+
+    let result = runTurn(harrowMineAdventure, state, "east then east then take crowbar", undefined);
+    state = result.state;
+
+    expect(state.currentRoomId).toBe("loading_yard");
+    expect(state.inventory).toContain("crowbar");
+
+    state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "mine_road");
+    result = runTurn(harrowMineAdventure, state, "examine milestone", undefined);
+    result = runTurn(harrowMineAdventure, result.state, "again", undefined);
+
+    expect(result.messages).toContain(
+      "The milestone has lost both distance and dignity, but not the knack of marking a road."
+    );
+  });
+
+  it("supports TAKE ALL, EXCEPT filters, batch THEM, and noun lists", () => {
+    let state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "foreman_shed");
+    let result = runTurn(harrowMineAdventure, state, "take all except lamp", undefined);
+    state = result.state;
+
+    expect(state.inventory).toEqual(expect.arrayContaining(["oil_flask", "winding_handle"]));
+    expect(state.inventory).not.toContain("lamp");
+
+    result = runTurn(harrowMineAdventure, state, "drop them", undefined);
+    state = result.state;
+
+    expect(state.inventory).not.toContain("oil_flask");
+    expect(state.inventory).not.toContain("winding_handle");
+
+    result = runTurn(harrowMineAdventure, state, "take oil and handle", undefined);
+
+    expect(result.state.inventory).toEqual(expect.arrayContaining(["oil_flask", "winding_handle"]));
+  });
+
+  it("keeps broad unsafe batch commands from guessing", () => {
+    const state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "loading_yard");
+    const result = runTurn(harrowMineAdventure, state, "unlock all", undefined);
+
+    expect(result.messages).toContain("That is too broad. Try naming the thing you want.");
+  });
+
+  it("stores clarification state and resolves a short follow-up", () => {
+    let state = createInitialGameState(tinyAdventure);
+    let result = runTurn(tinyAdventure, state, "examine door", undefined);
+    state = result.state;
+
+    expect(result.messages).toContain("Which door do you mean: oak door or iron door?");
+    expect(state.parser.pendingClarification?.candidateIds).toEqual(["oak_door", "iron_door"]);
+
+    result = runTurn(tinyAdventure, state, "oak", undefined);
+
+    expect(result.messages).toEqual([
+      "I read that as: EXAMINE DOOR.",
+      "A plain oak door with a brass latch."
+    ]);
+  });
+
+  it("shows likely-parse normalization when acting on natural directed phrasing", () => {
+    const state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "loading_yard");
+    const result = runTurn(harrowMineAdventure, state, "have Nessa pick lock", undefined);
+
+    expect(result.messages[0]).toBe("I read that as: UNLOCK LOCK.");
+    expect(result.messages.join("\n")).toContain("The hasp clicks.");
   });
 });
