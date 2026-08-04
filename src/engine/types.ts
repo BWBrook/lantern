@@ -8,31 +8,34 @@ export type HookId = string;
 export type ArtId = string;
 export type ItemLocation = RoomId | "inventory" | "hidden" | `attached:${string}`;
 
-export type CanonicalVerb =
-  | "LOOK"
-  | "EXAMINE"
-  | "GO"
-  | "TAKE"
-  | "DROP"
-  | "OPEN"
-  | "CLOSE"
-  | "UNLOCK"
-  | "USE"
-  | "LIGHT"
-  | "EXTINGUISH"
-  | "MOVE"
-  | "PUSH"
-  | "PULL"
-  | "SEARCH"
-  | "TURN"
-  | "ATTACH"
-  | "CROSS"
-  | "INVENTORY"
-  | "WAIT"
-  | "SWITCH_ACTOR"
-  | "SAVE"
-  | "LOAD"
-  | "HELP";
+export const CANONICAL_VERBS = [
+  "LOOK",
+  "EXAMINE",
+  "GO",
+  "TAKE",
+  "DROP",
+  "OPEN",
+  "CLOSE",
+  "UNLOCK",
+  "USE",
+  "LIGHT",
+  "EXTINGUISH",
+  "MOVE",
+  "PUSH",
+  "PULL",
+  "SEARCH",
+  "TURN",
+  "ATTACH",
+  "CROSS",
+  "INVENTORY",
+  "WAIT",
+  "SWITCH_ACTOR",
+  "SAVE",
+  "LOAD",
+  "HELP"
+] as const;
+
+export type CanonicalVerb = (typeof CANONICAL_VERBS)[number];
 
 export type ItemActionHookName =
   | "attach"
@@ -76,8 +79,6 @@ export interface DictionaryAliasEntry {
   pronouns?: string[];
 }
 
-export type DictionaryAliasSpec = string[] | DictionaryAliasEntry;
-
 export interface AdventureCommandTemplate {
   verb: CanonicalVerb;
   actor?: string;
@@ -90,13 +91,12 @@ export interface AdventureCommandTemplate {
 export interface AdventureDictionary {
   verbs: Partial<Record<CanonicalVerb, string[]>>;
   directions: Partial<Record<Direction, string[]>>;
-  actors: Partial<Record<ActorId, DictionaryAliasSpec>>;
-  items: Partial<Record<ItemId, DictionaryAliasSpec>>;
+  actors: Partial<Record<ActorId, DictionaryAliasEntry>>;
+  items: Partial<Record<ItemId, DictionaryAliasEntry>>;
   groups?: Record<string, string[]>;
   noiseWords?: string[];
   stopWords?: string[];
   idioms?: Record<string, AdventureCommandTemplate>;
-  commandTemplates?: Record<string, AdventureCommandTemplate>;
   phraseAliases?: Record<string, CanonicalVerb>;
 }
 
@@ -128,7 +128,6 @@ export interface AdventureItem {
   name: string;
   description: string;
   location: RoomId | "hidden";
-  aliases?: string[];
   portable?: boolean;
   scenery?: boolean;
   openable?: boolean;
@@ -145,7 +144,6 @@ export interface AdventureActor {
   id: ActorId;
   name: string;
   description: string;
-  aliases?: string[];
   abilities?: string[];
 }
 
@@ -153,6 +151,80 @@ export interface AdventureArt {
   id: ArtId;
   label: string;
   assetPath?: string;
+  scene?: AdventureSceneSpec;
+}
+
+export interface AdventureScenePalette {
+  skyTop: number;
+  skyBottom: number;
+  haze: number;
+  terrain: number;
+  silhouette: number;
+  accent: number;
+  glow: number;
+  panel: number;
+  panelBorder: number;
+  caption: string;
+  captionMuted: string;
+}
+
+interface SceneStroke {
+  width: number;
+  color: number;
+  alpha?: number;
+}
+
+export type AdventureSceneElement =
+  | {
+      type: "circle";
+      x: number;
+      y: number;
+      radius: number;
+      color: number;
+      alpha?: number;
+    }
+  | {
+      type: "ellipse";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      color: number;
+      alpha?: number;
+    }
+  | {
+      type: "line";
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      color: number;
+      alpha?: number;
+    }
+  | {
+      type: "polygon";
+      x: number;
+      y: number;
+      points: number[];
+      color: number;
+      alpha?: number;
+    }
+  | {
+      type: "rectangle";
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      color: number;
+      alpha?: number;
+      rotation?: number;
+      stroke?: SceneStroke;
+    };
+
+export interface AdventureSceneSpec {
+  palette: AdventureScenePalette;
+  elements: AdventureSceneElement[];
+  lampGlow?: boolean;
 }
 
 export interface AdventureRules {
@@ -219,7 +291,6 @@ export interface PendingClarification {
 export interface ParserContext {
   lastIntent: ResolvedIntent | undefined;
   pendingClarification: PendingClarification | undefined;
-  recentObjectIds: string[];
 }
 
 export interface AtomicCommand {
@@ -227,11 +298,6 @@ export interface AtomicCommand {
   intent: ResolvedIntent;
   normalized: string;
   source: string;
-}
-
-export interface CommandPlan {
-  commands: AtomicCommand[];
-  raw: string;
 }
 
 export interface GameState {
@@ -281,7 +347,6 @@ export interface AdventureDefinition {
   content: AdventureContent;
   hooks: AdventureHookRegistry;
   createInitialState(): AdventureStateSeed;
-  validate(): ValidationIssue[];
 }
 
 export interface RoomViewModel {
@@ -292,6 +357,7 @@ export interface RoomViewModel {
   artId: ArtId;
   artLabel: string;
   artAssetPath: string | undefined;
+  scene: AdventureSceneSpec | undefined;
   actorName: string;
   objective: string;
   lampState: string;
@@ -304,7 +370,6 @@ export interface TurnResult {
 
 export interface SaveRecord {
   adventureId: string;
-  adventureVersion: string;
   savedAt: string;
   state: GameState;
 }

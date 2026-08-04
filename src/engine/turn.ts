@@ -4,6 +4,7 @@ import {
   getActorById,
   getArtAssetPath,
   getArtLabel,
+  getArtScene,
   getRoomById
 } from "./adventure";
 import { handleSwitchActor } from "./actions/actors";
@@ -104,6 +105,7 @@ export function createRoomViewModel(
     artId: room.artId,
     artLabel: getArtLabel(adventure, room.artId),
     artAssetPath: getArtAssetPath(adventure, room.artId),
+    scene: getArtScene(adventure, room.artId),
     actorName: actor.name,
     objective: adventure.content.objective,
     lampState
@@ -191,6 +193,105 @@ function applyParserSuccessContext(state: GameState, command: AtomicCommand): Ga
   return nextState;
 }
 
+interface ParsedPart {
+  state: GameState;
+  commands?: AtomicCommand[];
+  messages: string[];
+}
+
+function parseCommandPart(
+  adventure: AdventureDefinition,
+  state: GameState,
+  source: string,
+  hasFollowingParts: boolean
+): ParsedPart {
+  try {
+    return {
+      state,
+      commands: parseAtomicCommands(adventure, state, source),
+      messages: []
+    };
+  } catch (error) {
+    let nextState = state;
+
+    if (
+      error instanceof ParserDiagnosticError &&
+      error.diagnostic.code === "ambiguous_noun" &&
+      error.diagnostic.intent &&
+      error.diagnostic.objectRole &&
+      error.diagnostic.candidateIds
+    ) {
+      nextState = setPendingClarification(nextState, {
+        originalRaw: source,
+        intent: error.diagnostic.intent,
+        objectRole: error.diagnostic.objectRole,
+        candidateIds: error.diagnostic.candidateIds
+      });
+    }
+
+    const message =
+      error instanceof ParserDiagnosticError
+        ? formatParserDiagnosticMessage(error.diagnostic, adventure, nextState) || error.message
+        : error instanceof Error
+          ? error.message
+          : "Something went wrong.";
+    const messages = hasFollowingParts
+      ? [message, "The rest of your command was not attempted."]
+      : [message];
+
+    return {
+      state: withMessages(nextState, messages).state,
+      messages
+    };
+  }
+}
+
+function executeAtomicCommands(
+  adventure: AdventureDefinition,
+  state: GameState,
+  commands: AtomicCommand[],
+  storage: StorageLike | undefined,
+  hasFollowingParts: boolean
+): { state: GameState; messages: string[]; stopped: boolean } {
+  let nextState = state;
+  const messages: string[] = [];
+  const batchObjectIds = commands
+    .map((command) => command.intent.directObjectId)
+    .filter(Boolean) as string[];
+
+  for (let commandIndex = 0; commandIndex < commands.length; commandIndex += 1) {
+    const command = commands[commandIndex]!;
+    const prefixMessages =
+      command.confidence === "likely" ? [`I read that as: ${command.normalized}.`] : [];
+    const actionResult = runResolvedIntent(adventure, nextState, command.intent, storage);
+    const commandMessages = [...prefixMessages, ...actionResult.messages];
+    const transcriptResult = withMessages(actionResult.state, commandMessages);
+
+    nextState = applyParserSuccessContext(transcriptResult.state, command);
+    messages.push(...commandMessages);
+
+    if (commands.length > 1 && batchObjectIds.length > 1) {
+      nextState = setPronounThem(nextState, batchObjectIds);
+    }
+
+    if (
+      isLikelyActionFailure(actionResult.messages) &&
+      (commandIndex < commands.length - 1 || hasFollowingParts)
+    ) {
+      const stopMessage = "The rest of your command was not attempted.";
+      const stopped = withMessages(nextState, [stopMessage]);
+
+      return {
+        state: stopped.state,
+        messages: [...messages, stopMessage],
+        stopped: true
+      };
+    }
+  }
+
+  return { state: nextState, messages, stopped: false };
+}
+
 export function runTurn(
   adventure: AdventureDefinition,
   state: GameState,
@@ -208,75 +309,35 @@ export function runTurn(
   const parts = splitCommandChain(trimmed);
 
   for (let partIndex = 0; partIndex < parts.length; partIndex += 1) {
-    let commands: AtomicCommand[];
+    const part = parseCommandPart(
+      adventure,
+      nextState,
+      parts[partIndex]!,
+      partIndex < parts.length - 1
+    );
 
-    try {
-      commands = parseAtomicCommands(adventure, nextState, parts[partIndex]!);
-    } catch (error) {
-      if (error instanceof ParserDiagnosticError) {
-        if (
-          error.diagnostic.code === "ambiguous_noun" &&
-          error.diagnostic.intent &&
-          error.diagnostic.objectRole &&
-          error.diagnostic.candidateIds
-        ) {
-          nextState = setPendingClarification(nextState, {
-            originalRaw: parts[partIndex]!,
-            intent: error.diagnostic.intent,
-            objectRole: error.diagnostic.objectRole,
-            candidateIds: error.diagnostic.candidateIds
-          });
-        }
-
-        const message = formatParserDiagnosticMessage(error.diagnostic, adventure, nextState) || error.message;
-        const finalMessages =
-          partIndex < parts.length - 1 ? [message, "The rest of your command was not attempted."] : [message];
-        const result = withMessages(nextState, finalMessages);
-
-        return {
-          state: result.state,
-          messages: [...messages, ...finalMessages]
-        };
-      }
-
-      const message = error instanceof Error ? error.message : "Something went wrong.";
-      const result = withMessages(nextState, [message]);
-
+    if (!part.commands) {
       return {
-        state: result.state,
-        messages: [...messages, message]
+        state: part.state,
+        messages: [...messages, ...part.messages]
       };
     }
 
-    const batchObjectIds = commands.map((command) => command.intent.directObjectId).filter(Boolean) as string[];
+    const result = executeAtomicCommands(
+      adventure,
+      nextState,
+      part.commands,
+      storage,
+      partIndex < parts.length - 1
+    );
+    nextState = result.state;
+    messages.push(...result.messages);
 
-    for (let commandIndex = 0; commandIndex < commands.length; commandIndex += 1) {
-      const command = commands[commandIndex]!;
-      const prefixMessages =
-        command.confidence === "likely" ? [`I read that as: ${command.normalized}.`] : [];
-      const actionResult = runResolvedIntent(adventure, nextState, command.intent, storage);
-      const commandMessages = [...prefixMessages, ...actionResult.messages];
-      const transcriptResult = withMessages(actionResult.state, commandMessages);
-
-      nextState = applyParserSuccessContext(transcriptResult.state, command);
-      messages.push(...commandMessages);
-
-      if (commands.length > 1 && batchObjectIds.length > 1) {
-        nextState = setPronounThem(nextState, batchObjectIds);
-      }
-
-      if (
-        isLikelyActionFailure(actionResult.messages) &&
-        (commandIndex < commands.length - 1 || partIndex < parts.length - 1)
-      ) {
-        const stopMessage = "The rest of your command was not attempted.";
-        const stopped = withMessages(nextState, [stopMessage]);
-
-        return {
-          state: stopped.state,
-          messages: [...messages, stopMessage]
-        };
-      }
+    if (result.stopped) {
+      return {
+        state: nextState,
+        messages
+      };
     }
   }
 

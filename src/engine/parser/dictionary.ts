@@ -4,7 +4,7 @@ import type {
   AdventureDefinition,
   AdventureDictionary,
   CanonicalVerb,
-  DictionaryAliasSpec,
+  DictionaryAliasEntry,
   Direction,
   ItemId
 } from "../types";
@@ -103,13 +103,9 @@ function appendAlias<T extends string>(map: Map<string, T[]>, alias: string, tar
   }
 }
 
-export function expandDictionaryAliasSpec(spec: DictionaryAliasSpec | undefined): string[] {
+export function expandDictionaryAliasSpec(spec: DictionaryAliasEntry | undefined): string[] {
   if (!spec) {
     return [];
-  }
-
-  if (Array.isArray(spec)) {
-    return spec;
   }
 
   const nouns = spec.nouns ?? [];
@@ -186,10 +182,6 @@ function compileCommandTemplates(dictionary: AdventureDictionary): CompiledAdven
     merged.set(normalizeDictionaryPhrase(alias), template);
   }
 
-  for (const [alias, template] of Object.entries(dictionary.commandTemplates ?? {})) {
-    merged.set(normalizeDictionaryPhrase(alias), template);
-  }
-
   return [...merged.entries()]
     .map(([alias, template]) => ({
       alias,
@@ -217,10 +209,9 @@ function collectItemPhrases(adventure: AdventureDefinition, itemId: ItemId): str
   }
 
   const configured = expandDictionaryAliasSpec(adventure.dictionary.items[item.id]);
-  const inline = item.aliases ?? [];
 
   return uniq(
-    [item.id, item.name, ...configured, ...inline]
+    [item.id, item.name, ...configured]
       .map(normalizeDictionaryPhrase)
       .filter(Boolean)
   );
@@ -234,10 +225,9 @@ function collectActorPhrases(adventure: AdventureDefinition, actorId: ActorId): 
   }
 
   const configured = expandDictionaryAliasSpec(adventure.dictionary.actors[actor.id]);
-  const inline = actor.aliases ?? [];
 
   return uniq(
-    [actor.id, actor.name, ...configured, ...inline]
+    [actor.id, actor.name, ...configured]
       .map(normalizeDictionaryPhrase)
       .filter(Boolean)
   );

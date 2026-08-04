@@ -13,7 +13,6 @@ export function saveGame(
 ): void {
   const record: SaveRecord = {
     adventureId: adventure.metadata.id,
-    adventureVersion: adventure.metadata.version,
     savedAt: new Date().toISOString(),
     state
   };
@@ -37,12 +36,5 @@ export function loadGame(
     throw new Error("Save data belongs to a different adventure.");
   }
 
-  return {
-    ...parsed.state,
-    parser: parsed.state.parser ?? {
-      lastIntent: undefined,
-      pendingClarification: undefined,
-      recentObjectIds: []
-    }
-  };
+  return parsed.state;
 }

@@ -1,11 +1,11 @@
+import { CANONICAL_VERBS } from "./types";
 import type {
   AdventureDefinition,
   AdventureItem,
-  CanonicalVerb,
   ItemActionHookName,
   ValidationIssue
 } from "./types";
-import { expandDictionaryAliasSpec } from "./parser/dictionary";
+import { expandDictionaryAliasSpec, normalizeDictionaryPhrase } from "./parser/dictionary";
 
 function findDuplicates(values: string[]): string[] {
   const seen = new Set<string>();
@@ -121,16 +121,8 @@ function validateDictionary(
     aliasPairs.push(...expandDictionaryAliasSpec(aliases).map((alias) => [alias, [`item:${itemId}`]] as [string, string[]]));
   }
 
-  for (const item of adventure.content.items) {
-    aliasPairs.push(...(item.aliases ?? []).map((alias) => [alias, [`item:${item.id}`]] as [string, string[]]));
-  }
-
-  for (const actor of adventure.content.actors) {
-    aliasPairs.push(...(actor.aliases ?? []).map((alias) => [alias, [`actor:${actor.id}`]] as [string, string[]]));
-  }
-
   for (const [alias, owners] of aliasPairs) {
-    const normalized = alias.trim().toLowerCase();
+    const normalized = normalizeDictionaryPhrase(alias);
     const current = aliasOwners.get(normalized) ?? new Set<string>();
 
     for (const owner of owners) {
@@ -150,37 +142,9 @@ function validateDictionary(
     }
   }
 
-  const canonicalVerbs = new Set<CanonicalVerb>([
-    "ATTACH",
-    "CLOSE",
-    "CROSS",
-    "DROP",
-    "EXAMINE",
-    "EXTINGUISH",
-    "GO",
-    "HELP",
-    "INVENTORY",
-    "LIGHT",
-    "LOAD",
-    "LOOK",
-    "MOVE",
-    "OPEN",
-    "PULL",
-    "PUSH",
-    "SAVE",
-    "SEARCH",
-    "SWITCH_ACTOR",
-    "TAKE",
-    "TURN",
-    "UNLOCK",
-    "USE",
-    "WAIT"
-  ]);
+  const canonicalVerbs = new Set(CANONICAL_VERBS);
 
-  for (const [alias, template] of Object.entries({
-    ...(adventure.dictionary.idioms ?? {}),
-    ...(adventure.dictionary.commandTemplates ?? {})
-  })) {
+  for (const [alias, template] of Object.entries(adventure.dictionary.idioms ?? {})) {
     if (!canonicalVerbs.has(template.verb)) {
       issues.push({
         scope: "metadata",
@@ -304,5 +268,5 @@ export function validateAdventureBundle(
     });
   }
 
-  return [...issues, ...adventure.validate()];
+  return issues;
 }

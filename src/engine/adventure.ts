@@ -64,6 +64,13 @@ export function getArtAssetPath(
   return adventure.content.art.find((candidate) => candidate.id === artId)?.assetPath;
 }
 
+export function getArtScene(
+  adventure: AdventureDefinition,
+  artId: string
+) {
+  return adventure.content.art.find((candidate) => candidate.id === artId)?.scene;
+}
+
 export function appendTranscript(
   state: GameState,
   kind: "system" | "player",

@@ -51,7 +51,8 @@ Lantern v1 is intentionally opinionated.
 ### Each adventure owns
 
 - metadata and presentation identity
-- rooms, items, actors, flags, prose, and art references
+- rooms, items, actors, flags, prose, and art manifests, including optional
+  deterministic fallback-scene data
 - parser-facing dictionary additions such as aliases, actor names, and object names
 - bespoke rule hooks referenced by that adventure's content
 - initial state, objective text, and victory conditions
@@ -92,11 +93,10 @@ The repo should converge toward this split:
 │     ├─ hooks/
 │     │  └─ index.ts
 │     ├─ assets/
-│     │  ├─ rooms/
-│     │  └─ ui/
+│     │  └─ rooms/
 │     └─ tests/
 │        ├─ golden-path.txt
-│        └─ content.test.ts
+│        └─ parser-v3-corpus.json
 ├─ src/
 │  ├─ main.ts
 │  ├─ app/
@@ -136,8 +136,6 @@ At minimum, the bundle should provide:
   adventure's content
 - `createInitialState()`: the authoritative starting world state for that
   adventure
-- `validate()`: an adventure-level integrity check that plugs into Lantern's
-  validation flow
 
 The runtime contract should stay small and explicit. A good starting shape is:
 
@@ -149,7 +147,6 @@ interface AdventureDefinition {
   content: AdventureContent;
   hooks: AdventureHookRegistry;
   createInitialState(): AdventureStateSeed;
-  validate(): ValidationIssue[];
 }
 ```
 
@@ -213,7 +210,7 @@ Bad examples:
 - generic movement between unblocked rooms
 - UI-specific formatting decisions
 
-## Parser and Lexicon Policy
+## Parser and Dictionary Policy
 
 Lantern owns the parser grammar and canonical intent model. Adventures do not
 get to redefine sentence structure.
@@ -237,8 +234,6 @@ intents before world state changes.
 Save data must be adventure-aware.
 
 - Every save record should include `adventureId`.
-- Save data should also include an engine/adventure version marker once the code
-  exists.
 - Lantern should reject or clearly explain mismatched save files rather than
   silently loading the wrong adventure state.
 - Save/load behavior must not depend on hidden global content outside the active

@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { eventBus } from "./event-bus";
 import { INTERNAL_SCENE_HEIGHT, INTERNAL_SCENE_WIDTH } from "./settings";
 import { loadActiveAdventure } from "./load-adventure";
 import { createRoomViewModel, createInitialTranscriptState, runTurn } from "../engine/turn";
@@ -111,8 +110,9 @@ function applyTheme(root: HTMLElement, adventure: AdventureDefinition): void {
   root.style.setProperty("--lantern-text", adventure.theme.textColor);
 }
 
-function createGame(parent: HTMLElement): Phaser.Game {
-  return new Phaser.Game({
+function createGame(parent: HTMLElement): GameScene {
+  const scene = new GameScene();
+  new Phaser.Game({
     type: Phaser.AUTO,
     backgroundColor: "#17120e",
     parent,
@@ -124,8 +124,10 @@ function createGame(parent: HTMLElement): Phaser.Game {
       width: INTERNAL_SCENE_WIDTH,
       height: INTERNAL_SCENE_HEIGHT
     },
-    scene: [GameScene]
+    scene: [scene]
   });
+
+  return scene;
 }
 
 function appendLines(
@@ -141,17 +143,18 @@ function renderState(
   adventure: AdventureDefinition,
   state: GameState,
   transcriptController: ReturnType<typeof createTranscriptController>,
-  statusController: ReturnType<typeof createStatusController>
+  statusController: ReturnType<typeof createStatusController>,
+  scene: GameScene
 ): void {
   transcriptController.clear();
   appendLines(transcriptController, state.transcript);
 
   const viewModel = createRoomViewModel(adventure, state);
   statusController.render(viewModel);
-  eventBus.emit("room:changed", viewModel);
+  scene.setRoomViewModel(viewModel);
 }
 
-export async function bootApplication(root: HTMLElement | null): Promise<void> {
+export function bootApplication(root: HTMLElement | null): void {
   if (!root) {
     throw new Error("Missing app root.");
   }
@@ -177,14 +180,14 @@ export async function bootApplication(root: HTMLElement | null): Promise<void> {
     shell.lampState
   );
 
-  const game = createGame(shell.artMount);
+  const scene = createGame(shell.artMount);
   let state = createInitialTranscriptState(adventure);
 
-  renderState(adventure, state, transcriptController, statusController);
+  renderState(adventure, state, transcriptController, statusController, scene);
 
   function dispatch(command: string): void {
     state = runTurn(adventure, state, command, window.localStorage).state;
-    renderState(adventure, state, transcriptController, statusController);
+    renderState(adventure, state, transcriptController, statusController, scene);
     promptController.reset();
   }
 
@@ -192,7 +195,7 @@ export async function bootApplication(root: HTMLElement | null): Promise<void> {
 
   bindRestartButton(shell.restartButton, () => {
     state = createInitialTranscriptState(adventure);
-    renderState(adventure, state, transcriptController, statusController);
+    renderState(adventure, state, transcriptController, statusController, scene);
     promptController.focus();
   });
 
@@ -203,14 +206,6 @@ export async function bootApplication(root: HTMLElement | null): Promise<void> {
   shell.loadButton.addEventListener("click", () => {
     dispatch("LOAD");
   });
-
-  root.addEventListener(
-    "DOMNodeRemoved",
-    () => {
-      game.destroy(true);
-    },
-    { once: true }
-  );
 
   promptController.focus();
 }

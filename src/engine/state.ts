@@ -67,8 +67,7 @@ export function createInitialGameState(
     itemStates,
     parser: {
       lastIntent: undefined,
-      pendingClarification: undefined,
-      recentObjectIds: []
+      pendingClarification: undefined
     },
     pronouns: {
       it: undefined,
@@ -192,10 +191,6 @@ export function isItemLocked(
 export function setPronounIt(state: GameState, itemId: string | undefined): GameState {
   return {
     ...state,
-    parser: {
-      ...state.parser,
-      recentObjectIds: itemId ? [itemId] : []
-    },
     pronouns: {
       ...state.pronouns,
       it: itemId,
@@ -210,10 +205,6 @@ export function setPronounThem(state: GameState, itemIds: string[]): GameState {
 
   return {
     ...state,
-    parser: {
-      ...state.parser,
-      recentObjectIds: uniqueItemIds
-    },
     pronouns: {
       ...state.pronouns,
       it: uniqueItemIds.length === 1 ? firstItemId : state.pronouns.it,

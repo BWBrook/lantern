@@ -22,12 +22,12 @@ const tinyAdventure: AdventureDefinition = {
       west: ["west"]
     },
     actors: {
-      scout: ["scout"]
+      scout: { aliases: ["scout"] }
     },
     items: {
-      iron_door: ["iron door"],
-      oak_door: ["oak door"],
-      signal_lamp: ["lamp", "signal lamp"]
+      iron_door: { aliases: ["iron door"] },
+      oak_door: { aliases: ["oak door"] },
+      signal_lamp: { aliases: ["lamp", "signal lamp"] }
     },
     groups: {
       door: ["oak_door", "iron_door"]
@@ -121,9 +121,6 @@ const tinyAdventure: AdventureDefinition = {
       currentRoomId: "clearing",
       activeActorId: "scout"
     };
-  },
-  validate() {
-    return [];
   }
 };
 

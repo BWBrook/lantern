@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import harrowMineAdventure from "../../adventures/harrow_mine/adventure";
 import tinyAdventure from "../fixtures/tiny_adventure/adventure";
 import { createInitialTranscriptState, runTurn } from "../../src/engine/turn";
-import { loadGame, saveGame } from "../../src/engine/save/storage";
+import { createSaveKey, loadGame, saveGame } from "../../src/engine/save/storage";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -39,9 +39,18 @@ describe("save/load", () => {
 
   it("rejects loading save data for another adventure", () => {
     const storage = new MemoryStorage();
-    saveGame(storage, tinyAdventure, createInitialTranscriptState(tinyAdventure));
+    const state = createInitialTranscriptState(tinyAdventure);
+    storage.setItem(
+      createSaveKey(harrowMineAdventure),
+      JSON.stringify({
+        adventureId: tinyAdventure.metadata.id,
+        savedAt: new Date().toISOString(),
+        state
+      })
+    );
 
-    expect(() => loadGame(storage, harrowMineAdventure)).not.toThrow();
-    expect(loadGame(storage, harrowMineAdventure)).toBeNull();
+    expect(() => loadGame(storage, harrowMineAdventure)).toThrow(
+      "Save data belongs to a different adventure."
+    );
   });
 });

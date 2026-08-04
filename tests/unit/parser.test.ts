@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import harrowMineAdventure from "../../adventures/harrow_mine/adventure";
 import { ParserDiagnosticError } from "../../src/engine/parser/diagnostics";
-import { parseAndResolveCommand } from "../../src/engine/parser/parse";
+import { parseAtomicCommands } from "../../src/engine/parser/plan";
 import {
   createInitialGameState,
   setCurrentRoom,
@@ -12,7 +12,7 @@ import { runTurn } from "../../src/engine/turn";
 import tinyAdventure from "../fixtures/tiny_adventure/adventure";
 
 function resolve(input: string, state = createInitialGameState(harrowMineAdventure)) {
-  return parseAndResolveCommand(harrowMineAdventure, state, input);
+  return parseAtomicCommands(harrowMineAdventure, state, input)[0]!.intent;
 }
 
 describe("parser v2", () => {
@@ -106,7 +106,7 @@ describe("parser v2", () => {
   it("raises explicit disambiguation for visible grouped nouns", () => {
     const state = createInitialGameState(tinyAdventure);
 
-    expect(() => parseAndResolveCommand(tinyAdventure, state, "EXAMINE DOOR")).toThrowError(
+    expect(() => parseAtomicCommands(tinyAdventure, state, "EXAMINE DOOR")).toThrowError(
       'Which door do you mean: oak door or iron door?'
     );
   });

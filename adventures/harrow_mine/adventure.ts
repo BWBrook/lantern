@@ -37,9 +37,6 @@ const harrowMineAdventure: AdventureDefinition = {
       currentRoomId: "town_edge",
       activeActorId: "bram"
     };
-  },
-  validate() {
-    return [];
   }
 };
 

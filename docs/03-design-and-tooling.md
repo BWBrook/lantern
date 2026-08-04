@@ -63,7 +63,10 @@ Parser and prose alone will not make the game feel alive. The data model must tr
 
 ### 5. Art is authored content, not wallpaper
 
-Every room definition should include an image id and an art prompt seed. Placeholder art is acceptable early on. Final art should be curated and kept consistent.
+Every room definition should include an image id. The adventure art manifest may
+also provide deterministic placeholder-scene data, prompt notes, or a final
+asset path. Placeholder art is acceptable early on; final art should be curated
+and kept consistent.
 
 ## Suggested internal resolution and layout
 

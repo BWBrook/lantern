@@ -30,4 +30,8 @@ describe("adventure contract", () => {
       expect(existsSync(fileURLToPath(url))).toBe(true);
     }
   });
+
+  it("provides deterministic fallback scene data for every Harrow room", () => {
+    expect(harrowMineAdventure.content.art.every((art) => art.scene)).toBe(true);
+  });
 });

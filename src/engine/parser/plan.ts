@@ -3,7 +3,6 @@ import type {
   AdventureDefinition,
   AtomicCommand,
   CanonicalVerb,
-  CommandPlan,
   GameState,
   Intent,
   ResolvedIntent
@@ -352,15 +351,4 @@ export function parseAtomicCommands(
 
     throw error;
   }
-}
-
-export function parseCommandPlan(
-  adventure: AdventureDefinition,
-  state: GameState,
-  raw: string
-): CommandPlan {
-  return {
-    commands: splitCommandChain(raw).flatMap((source) => parseAtomicCommands(adventure, state, source)),
-    raw
-  };
 }

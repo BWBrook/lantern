@@ -21,7 +21,6 @@ The v1 result is considered “decent” when:
 - No runtime AI or network calls during play.
 - No content editor in the first version.
 - No combat system in the first version.
-- No multi-command parser chaining in the first version.
 - No giant generic scripting framework before the known one-off rules exist.
 - No per-character inventory complexity in MVP.
 - No runtime adventure selector UI in the first version.
@@ -94,28 +93,30 @@ The implementation should converge toward something close to this shape:
 │     ├─ hooks/
 │     │  └─ index.ts
 │     ├─ assets/
-│     │  ├─ rooms/
-│     │  └─ ui/
+│     │  └─ rooms/
 │     └─ tests/
 │        ├─ golden-path.txt
-│        └─ content.test.ts
+│        └─ parser-v3-corpus.json
 ├─ src/
 │  ├─ main.ts
 │  ├─ app/
 │  │  ├─ boot.ts
 │  │  ├─ load-adventure.ts
-│  │  ├─ settings.ts
-│  │  └─ event-bus.ts
+│  │  └─ settings.ts
 │  ├─ engine/
 │  │  ├─ adventure.ts
 │  │  ├─ types.ts
 │  │  ├─ validation.ts
 │  │  ├─ state.ts
 │  │  ├─ turn.ts
+│  │  ├─ navigation.ts
 │  │  ├─ parser/
 │  │  │  ├─ tokenize.ts
 │  │  │  ├─ normalize.ts
-│  │  │  ├─ parse.ts
+│  │  │  ├─ phrases.ts
+│  │  │  ├─ dictionary.ts
+│  │  │  ├─ diagnostics.ts
+│  │  │  ├─ plan.ts
 │  │  │  └─ resolve.ts
 │  │  ├─ actions/
 │  │  │  ├─ movement.ts
@@ -123,7 +124,6 @@ The implementation should converge toward something close to this shape:
 │  │  │  ├─ objects.ts
 │  │  │  └─ actors.ts
 │  │  ├─ rules/
-│  │  │  ├─ validators.ts
 │  │  │  ├─ hooks.ts
 │  │  │  └─ visibility.ts
 │  │  └─ save/
@@ -142,11 +142,13 @@ The implementation should converge toward something close to this shape:
 └─ tests/
    ├─ unit/
    │  ├─ parser.test.ts
-   │  ├─ world.test.ts
+   │  ├─ parser-corpus.test.ts
+   │  ├─ state.test.ts
    │  ├─ contract.test.ts
    │  └─ save.test.ts
    ├─ e2e/
-   │  └─ harrow-golden-path.spec.ts
+   │  ├─ smoke.spec.ts
+   │  └─ harrow-browser.spec.ts
    └─ fixtures/
       └─ tiny_adventure/
          └─ adventure.ts
@@ -373,13 +375,12 @@ remaining deterministic, offline, and engine-owned.
 
 ### Tasks
 
-- Add command-plan parsing so one input can compile to one or more canonical
-  intents.
+- Parse each input into one or more atomic canonical intents.
 - Support polite fillers, gerunds, richer actor direction, reordered
   prepositions, noun lists, `ALL`/`EXCEPT`, `AGAIN`, and clarification
   follow-ups.
-- Extend parser context in game state for last-command repeat, recent objects,
-  batch-aware `THEM`, and pending disambiguation.
+- Extend parser context in game state for last-command repeat, batch-aware
+  `THEM`, and pending disambiguation.
 - Allow richer adventure dictionary entries with aliases, nouns, adjectives,
   actor pronouns, noise words, and exact idiom templates.
 - Expand Harrow's parser-facing dictionary and maintain a parser phrase corpus
