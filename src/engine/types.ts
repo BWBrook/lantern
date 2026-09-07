@@ -59,7 +59,7 @@ export type ItemActionHookName =
   | "use";
 
 export interface TranscriptLine {
-  kind: "system" | "player";
+  kind: "system" | "player" | "note";
   text: string;
 }
 

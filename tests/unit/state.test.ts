@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import harrowMineAdventure from "../../adventures/harrow_mine/adventure";
 import { createInitialGameState } from "../../src/engine/state";
-import { createInitialTranscriptState, runTurn } from "../../src/engine/turn";
+import { createInitialTranscriptState, formatTranscript, runTurn } from "../../src/engine/turn";
 
 describe("turn loop", () => {
   it("starts in the Harrow opening room", () => {
@@ -173,6 +173,24 @@ describe("turn loop", () => {
 
     expect(state.currentRoomId).toBe("mine_road");
     expect(state.flags).toContain("victory");
+  });
+
+  it("keeps playtest notes beside the commands they refer to in the export", () => {
+    let state = createInitialTranscriptState(harrowMineAdventure);
+    state = runTurn(harrowMineAdventure, state, "east", undefined).state;
+    const noted = runTurn(harrowMineAdventure, state, "# expected the milestone to be mentioned first", undefined);
+
+    expect(noted.messages).toEqual([]);
+    expect(noted.state.transcript.at(-1)).toEqual({
+      kind: "note",
+      text: "expected the milestone to be mentioned first"
+    });
+
+    const text = formatTranscript(harrowMineAdventure, noted.state);
+
+    expect(text).toContain("The Harrow Mine Job (harrow_mine v0.1.0)");
+    expect(text).toContain("\n> east\nMine Road\n");
+    expect(text.trim().endsWith("# expected the milestone to be mentioned first")).toBe(true);
   });
 
   it("completes the Harrow golden path to victory", () => {

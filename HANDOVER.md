@@ -164,6 +164,8 @@ uncommitted in the working tree pending his review:
   phrasing and is exercised by `tests/unit/state.test.ts`.
 - The grammar as built is documented in `docs/03-design-and-tooling.md`.
 
-Verification at handoff is recorded in the session summary. The next evidence
-set is Barry's own playthrough of this v2; capture intended action, exact
-input, response, and any reformulation, then grow the corpus from it.
+Playtest capture is built in: a line starting with `#` is stored in the
+transcript as a note without being parsed, and the `Copy Transcript` button (or
+typing `TRANSCRIPT`) puts the whole session, notes included, on the clipboard.
+The next evidence set is Barry's own playthrough of this v2, exported that way;
+turn each stumble into a `parser-corpus.json` case, then fix generically.

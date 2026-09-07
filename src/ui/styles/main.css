@@ -176,6 +176,29 @@ input {
   color: var(--lantern-accent);
 }
 
+.transcript__line--note {
+  color: var(--lantern-muted);
+  font-style: italic;
+}
+
+.lantern-export {
+  color: var(--lantern-muted);
+  font-size: 0.9rem;
+}
+
+.lantern-export textarea {
+  background: rgba(8, 7, 5, 0.8);
+  border: 1px solid var(--lantern-border);
+  border-radius: 10px;
+  color: var(--lantern-text);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  min-height: 160px;
+  padding: 10px;
+  width: 100%;
+}
+
 .lantern-prompt {
   align-items: center;
   display: grid;

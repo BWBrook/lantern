@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { INTERNAL_SCENE_HEIGHT, INTERNAL_SCENE_WIDTH } from "./settings";
 import { loadActiveAdventure } from "./load-adventure";
-import { createRoomViewModel, createInitialTranscriptState, runTurn } from "../engine/turn";
+import { createRoomViewModel, createInitialTranscriptState, formatTranscript, runTurn } from "../engine/turn";
 import { validateAdventureBundle } from "../engine/validation";
 import type { AdventureDefinition, GameState, TranscriptLine } from "../engine/types";
 import { bindRestartButton } from "../ui/dom/menus";
@@ -23,6 +23,8 @@ interface ShellElements {
   restartButton: HTMLButtonElement;
   saveButton: HTMLButtonElement;
   loadButton: HTMLButtonElement;
+  transcriptButton: HTMLButtonElement;
+  exportMount: HTMLElement;
   artMount: HTMLElement;
 }
 
@@ -77,10 +79,13 @@ function buildShell(root: HTMLElement): ShellElements {
             <button class="lantern-button" id="restart-button" type="button">New Game</button>
             <button class="lantern-button" id="save-button" type="button">Save</button>
             <button class="lantern-button" id="load-button" type="button">Load</button>
+            <button class="lantern-button" id="transcript-button" type="button">Copy Transcript</button>
           </div>
           <p class="lantern-help">
             Plain English works: LOOK, EXAMINE something, GO somewhere, or ask a companion. Type HELP for more.
+            Start a line with # to leave yourself a playtest note; Copy Transcript exports everything.
           </p>
+          <div class="lantern-export" id="export-mount" hidden></div>
         </section>
       </section>
     </main>
@@ -99,6 +104,8 @@ function buildShell(root: HTMLElement): ShellElements {
     restartButton: root.querySelector<HTMLButtonElement>("#restart-button")!,
     saveButton: root.querySelector<HTMLButtonElement>("#save-button")!,
     loadButton: root.querySelector<HTMLButtonElement>("#load-button")!,
+    transcriptButton: root.querySelector<HTMLButtonElement>("#transcript-button")!,
+    exportMount: root.querySelector<HTMLElement>("#export-mount")!,
     artMount: root.querySelector<HTMLElement>("#lantern-art")!
   };
 }
@@ -185,7 +192,39 @@ export function bootApplication(root: HTMLElement | null): void {
 
   renderState(adventure, state, transcriptController, statusController, scene);
 
+  function showExportFallback(text: string): void {
+    shell.exportMount.hidden = false;
+    shell.exportMount.innerHTML = "";
+    const label = document.createElement("p");
+    label.textContent = "Clipboard unavailable. Select and copy the transcript below.";
+    const area = document.createElement("textarea");
+    area.readOnly = true;
+    area.value = text;
+    shell.exportMount.append(label, area);
+    area.focus();
+    area.select();
+  }
+
+  function exportTranscript(): void {
+    const text = formatTranscript(adventure, state);
+
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => {
+        shell.exportMount.hidden = true;
+        state = runTurn(adventure, state, "# transcript copied to the clipboard", window.localStorage).state;
+        renderState(adventure, state, transcriptController, statusController, scene);
+      })
+      .catch(() => showExportFallback(text)) ?? showExportFallback(text);
+  }
+
   function dispatch(command: string): void {
+    if (/^transcript$/i.test(command.trim())) {
+      exportTranscript();
+      promptController.reset();
+      return;
+    }
+
     state = runTurn(adventure, state, command, window.localStorage).state;
     renderState(adventure, state, transcriptController, statusController, scene);
     promptController.reset();
@@ -205,6 +244,10 @@ export function bootApplication(root: HTMLElement | null): void {
 
   shell.loadButton.addEventListener("click", () => {
     dispatch("LOAD");
+  });
+
+  shell.transcriptButton.addEventListener("click", () => {
+    exportTranscript();
   });
 
   // On a narrow screen an autofocused input scrolls the illustration away.

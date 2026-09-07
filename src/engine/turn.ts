@@ -294,6 +294,32 @@ function executeAtomicCommands(
   return { state: nextState, messages, stopped: false };
 }
 
+// A line starting with "#" is a playtester's note: kept in the transcript,
+// never parsed, so intent and reaction sit beside the exact input.
+export function isPlaytestNote(rawCommand: string): boolean {
+  return rawCommand.trim().startsWith("#");
+}
+
+export function formatTranscript(adventure: AdventureDefinition, state: GameState): string {
+  const header = [
+    `${adventure.metadata.title} (${adventure.metadata.id} v${adventure.metadata.version})`,
+    `Transcript exported ${new Date().toISOString()}`,
+    ""
+  ];
+  const body = state.transcript.map((line) => {
+    switch (line.kind) {
+      case "player":
+        return `\n> ${line.text}`;
+      case "note":
+        return `# ${line.text}`;
+      default:
+        return line.text;
+    }
+  });
+
+  return [...header, ...body].join("\n").trim() + "\n";
+}
+
 export function runTurn(
   adventure: AdventureDefinition,
   state: GameState,
@@ -304,6 +330,15 @@ export function runTurn(
 
   if (!trimmed) {
     return withMessages(state, ["Lantern is listening."]);
+  }
+
+  if (isPlaytestNote(trimmed)) {
+    const note = trimmed.replace(/^#\s*/, "");
+
+    return {
+      state: appendTranscript(state, "note", note),
+      messages: []
+    };
   }
 
   let nextState = appendTranscript(state, "player", trimmed);

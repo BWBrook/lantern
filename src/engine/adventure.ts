@@ -6,7 +6,8 @@ import type {
   AdventureScenery,
   GameState,
   ItemId,
-  RoomId
+  RoomId,
+  TranscriptLine
 } from "./types";
 
 const ATTACHED_PREFIX = "attached:";
@@ -107,7 +108,7 @@ export function getArtScene(
 
 export function appendTranscript(
   state: GameState,
-  kind: "system" | "player",
+  kind: TranscriptLine["kind"],
   text: string
 ): GameState {
   return {
