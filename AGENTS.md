@@ -4,6 +4,9 @@ Read `docs/00-lantern-architecture.md` first, then
 `docs/04-implementation-spec.md`, then `docs/03-design-and-tooling.md`, then
 `docs/02-starter-plot-and-locations.md`, then `docs/01-concept-heritage.md`.
 
+Then read `HANDOVER.md` for the current checkpoint, open decisions, and verified
+baseline before resuming work.
+
 ## Hard constraints
 
 - Build Lantern as a deterministic illustrated parser engine. No runtime GenAI,
