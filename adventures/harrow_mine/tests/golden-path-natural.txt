@@ -1,0 +1,28 @@
+head east along the road
+go to the loading yard
+pick up the crowbar from the wreckage
+nessa, open the shed
+enter the shed
+get the lamp, oil and handle
+read the ledger
+leave the shed
+go to the mine entrance
+use the crowbar to lever the boards away
+go in
+light the lamp
+north
+go to the winch platform
+attach the handle and turn it
+return to the main gallery
+go to the flooded drift
+can nessa cross the ledge?
+back
+go through the gate
+move the fallen beam aside
+unlock the door with the key and open it
+enter the office
+take the lockbox
+out
+go north
+push the rusted grate open
+crawl out

@@ -54,6 +54,8 @@ function isLikelyActionFailure(messages: string[]): boolean {
     "you cannot",
     "you do not",
     "you need",
+    "you are not",
+    "it is still",
     "without"
   ].some((prefix) => first.startsWith(prefix));
 }
@@ -306,7 +308,7 @@ export function runTurn(
 
   let nextState = appendTranscript(state, "player", trimmed);
   const messages: string[] = [];
-  const parts = splitCommandChain(trimmed);
+  const parts = splitCommandChain(adventure, trimmed);
 
   for (let partIndex = 0; partIndex < parts.length; partIndex += 1) {
     const part = parseCommandPart(

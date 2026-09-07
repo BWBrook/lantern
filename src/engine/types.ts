@@ -29,6 +29,13 @@ export const CANONICAL_VERBS = [
   "CROSS",
   "INVENTORY",
   "WAIT",
+  "TALK",
+  "LISTEN",
+  "BREAK",
+  "CLIMB",
+  "FILL",
+  "SWIM",
+  "GIVE",
   "SWITCH_ACTOR",
   "SAVE",
   "LOAD",
@@ -103,10 +110,16 @@ export interface AdventureDictionary {
 export interface AdventureExit {
   direction: Direction;
   targetRoomId: RoomId;
+  viaItemId?: ItemId;
   requiredFlags?: FlagId[];
   hiddenUnlessFlags?: FlagId[];
   requiresOpenItemId?: ItemId;
   blockedMessage?: string;
+}
+
+export interface AdventureScenery {
+  nouns: string[];
+  description: string;
 }
 
 export interface AdventureRoom {
@@ -121,6 +134,7 @@ export interface AdventureRoom {
     repeat: string;
   };
   exits: AdventureExit[];
+  scenery?: AdventureScenery[];
 }
 
 export interface AdventureItem {
@@ -233,6 +247,7 @@ export interface AdventureRules {
 
 export interface AdventureContent {
   objective: string;
+  responses?: Partial<Record<CanonicalVerb, string>>;
   rooms: AdventureRoom[];
   items: AdventureItem[];
   actors: AdventureActor[];
@@ -268,6 +283,7 @@ export interface Intent {
   raw: string;
   confidence?: ParseConfidence;
   normalized?: string;
+  particles?: string[];
 }
 
 export interface ResolvedIntent {
@@ -303,6 +319,7 @@ export interface AtomicCommand {
 export interface GameState {
   adventureId: string;
   currentRoomId: RoomId;
+  previousRoomId: RoomId | undefined;
   activeActorId: ActorId;
   inventory: ItemId[];
   flags: FlagId[];

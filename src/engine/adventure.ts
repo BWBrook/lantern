@@ -3,10 +3,14 @@ import type {
   AdventureDefinition,
   AdventureItem,
   AdventureRoom,
+  AdventureScenery,
   GameState,
   ItemId,
   RoomId
 } from "./types";
+
+const ATTACHED_PREFIX = "attached:";
+const SCENERY_PREFIX = "scenery:";
 
 export function getRoomById(
   adventure: AdventureDefinition,
@@ -34,6 +38,13 @@ export function getItemById(
   return item;
 }
 
+export function findItemById(
+  adventure: AdventureDefinition,
+  itemId: string | undefined
+): AdventureItem | undefined {
+  return itemId ? adventure.content.items.find((candidate) => candidate.id === itemId) : undefined;
+}
+
 export function getActorById(
   adventure: AdventureDefinition,
   actorId: string
@@ -45,6 +56,29 @@ export function getActorById(
   }
 
   return actor;
+}
+
+export function findActorById(
+  adventure: AdventureDefinition,
+  actorId: string | undefined
+): AdventureActor | undefined {
+  return actorId ? adventure.content.actors.find((candidate) => candidate.id === actorId) : undefined;
+}
+
+export function getSceneryByRef(
+  adventure: AdventureDefinition,
+  ref: string | undefined
+): AdventureScenery | undefined {
+  if (!ref?.startsWith(SCENERY_PREFIX)) {
+    return undefined;
+  }
+
+  const separator = ref.lastIndexOf(":");
+  const roomId = ref.slice(SCENERY_PREFIX.length, separator);
+  const index = Number(ref.slice(separator + 1));
+  const room = adventure.content.rooms.find((candidate) => candidate.id === roomId);
+
+  return room?.scenery?.[index];
 }
 
 export function getArtLabel(
@@ -82,15 +116,42 @@ export function appendTranscript(
   };
 }
 
+export function getItemLocation(
+  adventure: AdventureDefinition,
+  state: GameState,
+  itemId: ItemId
+): string {
+  return state.itemLocations[itemId] ?? getItemById(adventure, itemId).location;
+}
+
+export function getAttachmentHost(
+  adventure: AdventureDefinition,
+  state: GameState,
+  itemId: ItemId
+): AdventureItem | undefined {
+  const location = getItemLocation(adventure, state, itemId);
+
+  return location.startsWith(ATTACHED_PREFIX)
+    ? findItemById(adventure, location.slice(ATTACHED_PREFIX.length))
+    : undefined;
+}
+
 export function isItemVisible(
   adventure: AdventureDefinition,
   state: GameState,
   itemId: ItemId
 ): boolean {
-  const item = getItemById(adventure, itemId);
-  const location = state.itemLocations[itemId] ?? item.location;
+  const location = getItemLocation(adventure, state, itemId);
 
-  return location === "inventory" || location === state.currentRoomId;
+  if (location === "inventory" || location === state.currentRoomId) {
+    return true;
+  }
+
+  if (location.startsWith(ATTACHED_PREFIX)) {
+    return isItemVisible(adventure, state, location.slice(ATTACHED_PREFIX.length));
+  }
+
+  return false;
 }
 
 export function getVisibleItems(

@@ -7,9 +7,10 @@ testbed for iterating on the engine.
 
 This repository starts from design-first documents so that code generation can
 begin with a clear boundary between engine and adventure. The shipped runtime
-must remain entirely self-contained. Codex and GPT-5.4 may help write code,
-tests, narrative text, content data, and art prompts during development, but
-the finished program must not make live model calls during play.
+must remain entirely self-contained. A coding agent (Claude from September
+2026; Codex earlier) may help write code, tests, narrative text, content data,
+and art prompts during development, but the finished program must not make
+live model calls during play.
 
 ## What success looks like
 
@@ -30,7 +31,7 @@ For a human reader, the cleanest order is:
 5. `docs/04-implementation-spec.md`
 6. `AGENTS.md`
 
-For Codex or another coding agent, the operational order should be:
+For a coding agent, the operational order should be:
 
 1. `AGENTS.md`
 2. `docs/00-lantern-architecture.md`
@@ -49,8 +50,8 @@ platform-specific corner.
 
 ## Included starter files
 
-- `AGENTS.md` — concise repo-local operating rules for Codex or any autonomous
-  coding agent
+- `AGENTS.md` — concise repo-local operating rules for any autonomous coding
+  agent (`CLAUDE.md` includes it for Claude Code)
 - `docs/00-lantern-architecture.md` — the Lantern/Harrow boundary, adventure
   contract, and recommended repo shape
 - `docs/01-concept-heritage.md` — the Harrow creative brief, lineage, and rules

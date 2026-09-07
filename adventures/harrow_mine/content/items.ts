@@ -68,12 +68,17 @@ export const items: AdventureItem[] = [
     description: "A heavy gate barring the west branch of the gallery. Somewhere, a mechanism still controls it.",
     location: "main_gallery",
     portable: false,
-    scenery: true
+    scenery: true,
+    hooks: {
+      open: "gate_refuse",
+      move: "gate_refuse",
+      unlock: "gate_refuse"
+    }
   },
   {
     id: "winch",
     name: "winch",
-    description: "A rusted winch missing the handle that should make it useful.",
+    description: "A rusted winch with a square socket where a handle should sit. Chains run off it into the dark.",
     location: "winch_platform",
     portable: false,
     hooks: {
@@ -130,7 +135,12 @@ export const items: AdventureItem[] = [
     id: "lockbox",
     name: "paymaster's lockbox",
     description: "Iron-banded, ugly, and very real. The whole job has collapsed into this one object.",
-    location: "assay_office"
+    location: "assay_office",
+    hooks: {
+      open: "lockbox_refuse",
+      unlock: "lockbox_refuse",
+      search: "lockbox_refuse"
+    }
   },
   {
     id: "vent_grate",

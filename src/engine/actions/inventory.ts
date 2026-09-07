@@ -1,4 +1,4 @@
-import { getItemById } from "../adventure";
+import { getAttachmentHost, getItemById, getItemLocation, getSceneryByRef } from "../adventure";
 import { setItemLocation, setPronounIt } from "../state";
 import type { AdventureDefinition, GameState, ResolvedIntent, TurnResult } from "../types";
 
@@ -35,13 +35,31 @@ export function handleTake(
     };
   }
 
+  const scenery = getSceneryByRef(adventure, itemId);
+
+  if (scenery) {
+    return {
+      state,
+      messages: [`You cannot carry off the ${scenery.nouns[0]}. It belongs to the place.`]
+    };
+  }
+
   const item = getItemById(adventure, itemId);
-  const location = state.itemLocations[item.id] ?? item.location;
+  const location = getItemLocation(adventure, state, item.id);
 
   if (location === "inventory") {
     return {
       state,
       messages: ["You already have that."]
+    };
+  }
+
+  const host = getAttachmentHost(adventure, state, item.id);
+
+  if (host) {
+    return {
+      state,
+      messages: [`The ${item.name} is fitted to the ${host.name} now, and better left there.`]
     };
   }
 
@@ -55,7 +73,7 @@ export function handleTake(
   if (item.portable === false || item.scenery) {
     return {
       state,
-      messages: [`The ${item.name} is not something you can carry off.`]
+      messages: [`You cannot carry off the ${item.name}.`]
     };
   }
 

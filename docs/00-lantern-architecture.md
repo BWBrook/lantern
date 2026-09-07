@@ -96,7 +96,7 @@ The repo should converge toward this split:
 │     │  └─ rooms/
 │     └─ tests/
 │        ├─ golden-path.txt
-│        └─ parser-v3-corpus.json
+│        └─ parser-corpus.json
 ├─ src/
 │  ├─ main.ts
 │  ├─ app/
@@ -131,7 +131,8 @@ At minimum, the bundle should provide:
   phrase forms that extend the
   engine-owned parser vocabulary
 - `content`: typed registries for rooms, items, actors, flags, art references,
-  in-repo asset paths, and objective text
+  in-repo asset paths, objective text, and optional verb-level `responses`
+  (in-fiction refusals for verbs the adventure has no mechanics for)
 - `hooks`: a named registry of bespoke actions or rule helpers referenced by the
   adventure's content
 - `createInitialState()`: the authoritative starting world state for that
@@ -172,7 +173,9 @@ Authors may extend Lantern through:
 
 - dictionary aliases and adventure-specific noun/verb surface forms
 - content-driven state such as rooms, items, exits, actors, flags, and objective
-  text
+  text, including per-room `scenery` nouns (examinable prose affordances) and
+  exit `viaItemId` links that let players name the door, gate, or passage they
+  mean instead of a compass direction
 - named hook functions for bespoke interactions
 - theme tokens, labels, and asset references
 - adventure-local tests and transcript fixtures
@@ -224,10 +227,11 @@ Adventures do get to extend the surface vocabulary by supplying:
 - direction aliases or local naming if needed
 
 This keeps the parser reusable while still allowing adventures to sound like
-themselves. Parser V3 may accept near-NLP surface phrasing, command chains,
+themselves. The parser accepts near-NLP surface phrasing, command chains,
 `ALL`/`EXCEPT`, `AGAIN`, and clarification follow-ups, but it remains
 deterministic: every accepted command must compile to one or more canonical
-intents before world state changes.
+intents before world state changes. See the parser grammar section of
+`docs/03-design-and-tooling.md` for the rules the engine applies.
 
 ## Save/Load Policy
 

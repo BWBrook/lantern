@@ -7,7 +7,23 @@ export function handleSwitchActor(
   state: GameState,
   intent: ResolvedIntent
 ): TurnResult {
-  const actor = getActorById(adventure, intent.actorId);
+  if (!intent.directObjectId) {
+    const current = getActorById(adventure, state.activeActorId);
+
+    return {
+      state,
+      messages: [`You are ${current.name} at the moment.`]
+    };
+  }
+
+  const actor = getActorById(adventure, intent.directObjectId);
+
+  if (actor.id === state.activeActorId) {
+    return {
+      state,
+      messages: [`You are already ${actor.name}.`]
+    };
+  }
 
   return {
     state: setActiveActor(state, actor.id),

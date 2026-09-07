@@ -4,7 +4,7 @@ import { dictionary } from "./content/dictionary";
 import { flags } from "./content/flags";
 import { items } from "./content/items";
 import { metadata } from "./content/metadata";
-import { objective } from "./content/objective";
+import { objective, responses } from "./content/objective";
 import { rooms } from "./content/rooms";
 import { hooks } from "./hooks";
 import type { AdventureDefinition, AdventureTheme } from "../../src/engine/types";
@@ -25,6 +25,7 @@ const harrowMineAdventure: AdventureDefinition = {
   },
   content: {
     objective,
+    responses,
     rooms,
     items,
     actors,

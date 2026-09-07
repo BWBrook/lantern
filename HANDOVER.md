@@ -103,7 +103,7 @@ Winch Platform, Flooded Drift and Assay Office. Stable fallbacks let this wait.
 - `adventures/harrow_mine/content/dictionary.ts`, `rooms.ts`, `items.ts` and
   `hooks/index.ts`: authored language, affordances and bespoke puzzle behavior.
 - `adventures/harrow_mine/tests/golden-path.txt` is exercised to victory by
-  `tests/unit/state.test.ts`; `parser-v3-corpus.json` supplies known phrase
+  `tests/unit/state.test.ts`; `parser-corpus.json` supplies known phrase
   cases. `tests/fixtures/tiny_adventure/` proves engine portability.
 - `content/art.ts` and `assets/rooms/README.md` inside the Harrow bundle hold
   scene data and art guidance; `src/ui/phaser/GameScene.ts` renders generically.
@@ -126,22 +126,44 @@ to match stale prose; reconcile relevant documentation when that work resumes.
 
 ## Working style and skills
 
-Use [Twilight Laboratory](/Users/bwbrook/.codex/skills/twilight-laboratory/SKILL.md)
+Use the `twilight-laboratory` skill (Claude: `~/.claude/skills/twilight-laboratory/SKILL.md`)
 to deliver coherent, reviewable tranches and preserve the gameplay discussion
 point. Once a tranche is approved, carry routine implementation and verification
 through autonomously rather than returning for permission at every step.
 
-Use [Kill Your Darlings](/Users/bwbrook/.codex/skills/kill-your-darlings/SKILL.md)
+Use the `kill-your-darlings` skill (Claude: `~/.claude/skills/kill-your-darlings/SKILL.md`)
 as a complexity discipline. This is a private personal prototype; speculative
 compatibility, duplicated tests and repeated audit passes have already been
 pruned. Add regression tests for changed parser/world/contract behavior, as
 required by `AGENTS.md`, and stop after meaningful acceptance plus one focused
 review/repair pass.
 
-For live play, use
-[playwright-interactive](/Users/bwbrook/.codex/skills/playwright-interactive/SKILL.md)
-or the available browser-control equivalent. Use
-[imagegen](/Users/bwbrook/.codex/skills/.system/imagegen/SKILL.md) when scene-art
-work resumes. Load skills for the work at hand, not all possible workflows.
+For live play, use the in-app browser tools or Playwright. Use an
+image-generation tool when scene-art work resumes. Load skills for the work at hand, not all possible workflows.
 Keep updates concise; distinguish observations from hypotheses. This note adds
 no authority to commit, push, publish or start the unapproved parser redesign.
+
+## Update: 7 September 2026, parser tranche (Claude)
+
+Barry approved the grammar-first tranche recommended in the assessment and
+asked for a v2 he could play before giving feedback. Completed in this tranche,
+uncommitted in the working tree pending his review:
+
+- Span-based chunking with particle lifting, purpose clauses, tolerant noun
+  matching, sole-object inference with honest disclosure, destination movement
+  (`OUT`, `IN`, `BACK`, room names, exit anchors via `viaItemId`), affordance
+  routing (push-to-open, open-unlocks, key-on-lock, fitted-part delegation,
+  implicit take), visited-room gating on "you know about", and a first-letter
+  rule for typo suggestions. New canonical verbs `TALK`, `LISTEN`, `BREAK`,
+  `CLIMB`, `FILL`, `SWIM`, `GIVE` with adventure-overridable `responses`.
+- Harrow gained per-room `scenery` nouns for every prose landmark, exit anchors,
+  lockbox and gate refusals, and in-fiction responses. Engine `HELP` no longer
+  names Harrow characters; it derives the companion name from the bundle.
+- `parser-corpus.json` (renamed from `parser-v3-corpus.json`) grew to 74 cases;
+  `golden-path-natural.txt` drives the game to victory in conversational
+  phrasing and is exercised by `tests/unit/state.test.ts`.
+- The grammar as built is documented in `docs/03-design-and-tooling.md`.
+
+Verification at handoff is recorded in the session summary. The next evidence
+set is Barry's own playthrough of this v2; capture intended action, exact
+input, response, and any reformulation, then grow the corpus from it.

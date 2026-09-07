@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("save, load, and restart work from the control buttons", async ({ page }) => {
   await page.goto("/");
 
-  const input = page.getByPlaceholder("Try LOOK, EAST, TAKE CROWBAR, or NESSA");
+  const input = page.locator("#prompt-input");
 
   await input.fill("NESSA");
   await input.press("Enter");
@@ -28,7 +28,7 @@ test("save, load, and restart work from the control buttons", async ({ page }) =
 test("accepts a natural-language mini-chain with pronouns", async ({ page }) => {
   await page.goto("/");
 
-  const input = page.getByPlaceholder("Try LOOK, EAST, TAKE CROWBAR, or NESSA");
+  const input = page.locator("#prompt-input");
 
   await input.fill("east then east then take crowbar then north then use it on planks");
   await input.press("Enter");

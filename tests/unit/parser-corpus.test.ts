@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import corpus from "../../adventures/harrow_mine/tests/parser-v3-corpus.json";
+import corpus from "../../adventures/harrow_mine/tests/parser-corpus.json";
 import harrowMineAdventure from "../../adventures/harrow_mine/adventure";
 import { parseAtomicCommands } from "../../src/engine/parser/plan";
 import {

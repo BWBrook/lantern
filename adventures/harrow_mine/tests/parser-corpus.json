@@ -1,0 +1,405 @@
+[
+  {
+    "input": "please take the brass lamp",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "lamp" }]
+  },
+  {
+    "input": "use the crowbar on the boards",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [
+      { "verb": "USE", "actorId": "bram", "directObjectId": "crowbar", "indirectObjectId": "entrance_planks" }
+    ]
+  },
+  {
+    "input": "pry open the mine mouth",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "entrance_planks" }]
+  },
+  {
+    "input": "have Nessa pick the padlock",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "UNLOCK", "actorId": "nessa", "directObjectId": "shed_door" }]
+  },
+  {
+    "input": "grab oil and handle",
+    "currentRoomId": "foreman_shed",
+    "expected": [
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "oil_flask" },
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "winding_handle" }
+    ]
+  },
+  {
+    "input": "get lamp, oil and handle",
+    "currentRoomId": "foreman_shed",
+    "expected": [
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "lamp" },
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "oil_flask" },
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "winding_handle" }
+    ]
+  },
+  {
+    "input": "fit handle to winch",
+    "currentRoomId": "winch_platform",
+    "inventory": ["winding_handle"],
+    "expected": [
+      { "verb": "ATTACH", "actorId": "bram", "directObjectId": "winding_handle", "indirectObjectId": "winch" }
+    ]
+  },
+  {
+    "input": "attach handle",
+    "currentRoomId": "winch_platform",
+    "inventory": ["winding_handle"],
+    "expected": [
+      { "verb": "ATTACH", "actorId": "bram", "directObjectId": "winding_handle", "indirectObjectId": "winch" }
+    ]
+  },
+  {
+    "input": "put the handle in the socket",
+    "currentRoomId": "winch_platform",
+    "inventory": ["winding_handle"],
+    "expected": [
+      { "verb": "ATTACH", "actorId": "bram", "directObjectId": "winding_handle", "indirectObjectId": "winch" }
+    ]
+  },
+  {
+    "input": "work winch",
+    "currentRoomId": "winch_platform",
+    "itemLocations": { "winding_handle": "attached:winch" },
+    "expected": [{ "verb": "TURN", "actorId": "bram", "directObjectId": "winch" }]
+  },
+  {
+    "input": "turn the handle",
+    "currentRoomId": "winch_platform",
+    "itemLocations": { "winding_handle": "attached:winch" },
+    "expected": [{ "verb": "TURN", "actorId": "bram", "directObjectId": "winding_handle" }]
+  },
+  {
+    "input": "send Nessa across the ledge",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "nessa, cross",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "can Nessa cross the ledge?",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "nessa, walk along the ledge",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "let nessa cross the water",
+    "currentRoomId": "flooded_drift",
+    "expected": [{ "verb": "CROSS", "actorId": "nessa", "directObjectId": "flooded_ledge" }]
+  },
+  {
+    "input": "shift beam",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "move the fallen beam aside",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "push the beam out of the way",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "PUSH", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "lift the heavy beam",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "bram, heave the beam clear",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "beam" }]
+  },
+  {
+    "input": "unlock the office with the brass key",
+    "currentRoomId": "stores_chamber",
+    "inventory": ["brass_key"],
+    "flags": ["beam_moved"],
+    "expected": [
+      { "verb": "UNLOCK", "actorId": "bram", "directObjectId": "assay_door", "indirectObjectId": "brass_key" }
+    ]
+  },
+  {
+    "input": "use key on door",
+    "currentRoomId": "stores_chamber",
+    "inventory": ["brass_key"],
+    "expected": [
+      { "verb": "USE", "actorId": "bram", "directObjectId": "brass_key", "indirectObjectId": "assay_door" }
+    ]
+  },
+  {
+    "input": "unlock",
+    "currentRoomId": "stores_chamber",
+    "inventory": ["brass_key"],
+    "expected": [{ "verb": "UNLOCK", "actorId": "bram", "directObjectId": "assay_door" }]
+  },
+  {
+    "input": "open the way out",
+    "currentRoomId": "vent_crawl",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "vent_grate" }]
+  },
+  {
+    "input": "push the rusted grate open",
+    "currentRoomId": "vent_crawl",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "vent_grate" }]
+  },
+  {
+    "input": "pull the boards off",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [{ "verb": "PULL", "actorId": "bram", "directObjectId": "entrance_planks" }]
+  },
+  {
+    "input": "use the crowbar to lever the boards away",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [
+      { "verb": "MOVE", "actorId": "bram", "directObjectId": "entrance_planks", "indirectObjectId": "crowbar" }
+    ]
+  },
+  {
+    "input": "take the crowbar to pry the planks",
+    "currentRoomId": "broken_entrance",
+    "inventory": ["crowbar"],
+    "expected": [
+      { "verb": "MOVE", "actorId": "bram", "directObjectId": "entrance_planks", "indirectObjectId": "crowbar" }
+    ]
+  },
+  {
+    "input": "remove the planks",
+    "currentRoomId": "broken_entrance",
+    "expected": [{ "verb": "MOVE", "actorId": "bram", "directObjectId": "entrance_planks" }]
+  },
+  {
+    "input": "kick the planks",
+    "currentRoomId": "broken_entrance",
+    "expected": [{ "verb": "BREAK", "actorId": "bram", "directObjectId": "entrance_planks" }]
+  },
+  {
+    "input": "enter the shed",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "go into the shed",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "go to the mine entrance",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "north" }]
+  },
+  {
+    "input": "head east along the road",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "walk to the mine road",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "leave the shed",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "out" }]
+  },
+  {
+    "input": "exit",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "out" }]
+  },
+  {
+    "input": "get out",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "out" }]
+  },
+  {
+    "input": "return to the main gallery",
+    "currentRoomId": "winch_platform",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "south" }]
+  },
+  {
+    "input": "go back",
+    "currentRoomId": "winch_platform",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "back" }]
+  },
+  {
+    "input": "back",
+    "currentRoomId": "winch_platform",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "back" }]
+  },
+  {
+    "input": "go through the gate",
+    "currentRoomId": "main_gallery",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "west" }]
+  },
+  {
+    "input": "go to the stores",
+    "currentRoomId": "main_gallery",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "west" }]
+  },
+  {
+    "input": "enter the office",
+    "currentRoomId": "stores_chamber",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "south" }]
+  },
+  {
+    "input": "crawl out to the road",
+    "currentRoomId": "vent_crawl",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "climb out through the grate",
+    "currentRoomId": "vent_crawl",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "east" }]
+  },
+  {
+    "input": "go in",
+    "currentRoomId": "broken_entrance",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "in" }]
+  },
+  {
+    "input": "get through the planks",
+    "currentRoomId": "broken_entrance",
+    "expected": [{ "verb": "GO", "actorId": "bram", "directObjectId": "north" }]
+  },
+  {
+    "input": "look at the ore carts",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "EXAMINE", "actorId": "bram", "directObjectId": "scenery:loading_yard:0" }]
+  },
+  {
+    "input": "x rails",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "EXAMINE", "actorId": "bram", "directObjectId": "scenery:loading_yard:1" }]
+  },
+  {
+    "input": "look down the shaft",
+    "currentRoomId": "winch_platform",
+    "expected": [{ "verb": "LOOK", "actorId": "bram", "directObjectId": "scenery:winch_platform:0" }]
+  },
+  {
+    "input": "read the ledger",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "EXAMINE", "actorId": "bram", "directObjectId": "shed_ledger" }]
+  },
+  {
+    "input": "look through the ledger",
+    "currentRoomId": "foreman_shed",
+    "expected": [{ "verb": "EXAMINE", "actorId": "bram", "directObjectId": "shed_ledger" }]
+  },
+  {
+    "input": "examine her",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "EXAMINE", "actorId": "bram", "directObjectId": "nessa" }]
+  },
+  {
+    "input": "talk to nessa",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "TALK", "actorId": "bram", "directObjectId": "nessa" }]
+  },
+  {
+    "input": "ask nessa about the mine",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "TALK", "actorId": "bram", "directObjectId": "nessa" }]
+  },
+  {
+    "input": "tell nessa to light the lamp",
+    "currentRoomId": "lamp_room",
+    "inventory": ["lamp"],
+    "expected": [{ "verb": "LIGHT", "actorId": "nessa", "directObjectId": "lamp" }]
+  },
+  {
+    "input": "turn on the lantern",
+    "currentRoomId": "lamp_room",
+    "inventory": ["lamp"],
+    "expected": [{ "verb": "LIGHT", "actorId": "bram", "directObjectId": "lamp" }]
+  },
+  {
+    "input": "light",
+    "currentRoomId": "lamp_room",
+    "inventory": ["lamp"],
+    "expected": [{ "verb": "LIGHT", "actorId": "bram", "directObjectId": "lamp" }]
+  },
+  {
+    "input": "i want to take the crowbar",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "crowbar" }]
+  },
+  {
+    "input": "let's get the crowbar",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "crowbar" }]
+  },
+  {
+    "input": "pick up the crowbar from the wreckage",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "crowbar" }]
+  },
+  {
+    "input": "taking the old crowbar",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "TAKE", "actorId": "bram", "directObjectId": "crowbar" }]
+  },
+  {
+    "input": "nessa pick the lock",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "UNLOCK", "actorId": "nessa", "directObjectId": "shed_door" }]
+  },
+  {
+    "input": "get nessa to open the padlock",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "OPEN", "actorId": "nessa", "directObjectId": "shed_door" }]
+  },
+  {
+    "input": "open",
+    "currentRoomId": "loading_yard",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "shed_door" }]
+  },
+  {
+    "input": "who am i",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "SWITCH_ACTOR", "actorId": "bram" }]
+  },
+  {
+    "input": "be the thief",
+    "currentRoomId": "town_edge",
+    "expected": [{ "verb": "SWITCH_ACTOR", "actorId": "nessa", "directObjectId": "nessa" }]
+  },
+  {
+    "input": "take all but the oil",
+    "currentRoomId": "foreman_shed",
+    "expected": [
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "lamp" },
+      { "verb": "TAKE", "actorId": "bram", "directObjectId": "winding_handle" }
+    ]
+  },
+  {
+    "input": "open the lockbox",
+    "currentRoomId": "assay_office",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "lockbox" }]
+  },
+  {
+    "input": "break open the lockbox",
+    "currentRoomId": "assay_office",
+    "expected": [{ "verb": "OPEN", "actorId": "bram", "directObjectId": "lockbox" }]
+  }
+]

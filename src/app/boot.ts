@@ -66,7 +66,7 @@ function buildShell(root: HTMLElement): ShellElements {
               class="lantern-prompt__input"
               aria-label="Command prompt"
               autocomplete="off"
-              placeholder="Try LOOK, EAST, TAKE CROWBAR, or NESSA"
+              placeholder="Type a command and press Enter"
               spellcheck="false"
             />
             <button class="lantern-prompt__submit" type="submit" aria-label="Submit command">
@@ -79,7 +79,7 @@ function buildShell(root: HTMLElement): ShellElements {
             <button class="lantern-button" id="load-button" type="button">Load</button>
           </div>
           <p class="lantern-help">
-            Try LOOK, EXAMINE MILESTONE, BE NESSA, NESSA, PICK LOCK, SAVE, or LOAD.
+            Plain English works: LOOK, EXAMINE something, GO somewhere, or ask a companion. Type HELP for more.
           </p>
         </section>
       </section>
@@ -207,5 +207,8 @@ export function bootApplication(root: HTMLElement | null): void {
     dispatch("LOAD");
   });
 
-  promptController.focus();
+  // On a narrow screen an autofocused input scrolls the illustration away.
+  if (window.matchMedia("(min-width: 901px)").matches) {
+    promptController.focus();
+  }
 }
