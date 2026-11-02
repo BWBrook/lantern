@@ -1,5 +1,7 @@
 # Lantern
 
+> **Status:** developed in the open as a working record. This is work in progress: contents may change, and nothing here is peer-reviewed unless stated.
+
 Lantern is a browser-first engine for deterministic, illustrated parser
 adventures. *The Harrow Mine Job* is the first bundled adventure in this repo:
 the reference implementation, the first playable vertical slice, and the main
@@ -69,3 +71,7 @@ Avoid a content editor, combat engine, procedural dungeon, giant dialogue tree,
 runtime selector UI, online features, or “smart” runtime text generation. The
 heart of this repo is the interaction between Lantern's parser/world/UI core
 and a small, well-authored adventure bundle.
+
+## Licence
+
+Code is released under the [MIT Licence](LICENSE). Text, figures and data created for this project are released under [CC BY-SA 4.0](LICENSE-CONTENT). Third-party material keeps its own terms where stated.
