@@ -6,7 +6,7 @@ Build the first playable version as a browser-first TypeScript project, using Vi
 
 This is the simplest combination that gives fast iteration, clean cross-platform behavior, and a strong retro presentation without turning text input into a UI problem.
 
-OpenAI's current guidance is a good fit for this workflow: for most code-generation tasks it recommends starting with `gpt-5.4`, and Codex explicitly reads `AGENTS.md` files before it starts work.[^1][^2] That means this repo should be treated as an AI-assisted codebase from day one, with the rules and scope written down where the agent will see them.
+This repo is treated as an AI-assisted codebase from day one, with the rules and scope written down where the agent will see them: `AGENTS.md` for any agent, included by `CLAUDE.md` for Claude Code.[^1][^2]
 
 ## Why this stack
 
@@ -51,7 +51,7 @@ Every location is a named room with authored text, state, exits, and one illustr
 ### 3. The parser is constrained English
 
 The parser should understand an explicit deterministic grammar and a
-well-maintained adventure dictionary. Parser V3 can feel near-NLP by accepting
+well-maintained adventure dictionary. It can feel near-NLP by accepting
 polite fillers, reordered prepositions, command chains, `ALL`/`EXCEPT`,
 `AGAIN`, and clarification follow-ups, but it should not attempt general
 semantic chat. Better to parse many physical adventure commands reliably than
@@ -143,6 +143,51 @@ preposition      := "with" | "using" | "at" | "in" | "into" | "on" | "from" | "t
 
 The implementation can be more pragmatic than formal. The important part is that the parser produces a clean canonical intent object.
 
+### How the grammar is applied (as built, September 2026)
+
+The pipeline is lexicon, then a small phrase-structure pass, then resolution
+against the world model. In order:
+
+1. **Strip and unwrap.** Articles, possessives, and noise adverbs go. Sentence
+   wrappers such as "I want to", "let's", "can you" are removed. Exact idiom
+   templates from the dictionary short-circuit everything else.
+2. **Actor addressing.** `NESSA, X`, `TELL NESSA TO X`, `ASK NESSA TO X`,
+   `HAVE NESSA X`, `CAN NESSA X`, `SEND NESSA ACROSS X`, and a bare `NESSA X`
+   all direct the command. `ASK NESSA ABOUT ...` is conversation, not a
+   directive.
+3. **Verb head.** A leading phrase alias ("look at", "pick up", "get through")
+   or a single verb alias, with gerunds normalised. A bare direction is `GO`.
+4. **Chunking.** The remainder is split into a direct phrase, at most one
+   preposition, and an indirect phrase. Loose particles ("aside", "away",
+   "off", "open", "out of the way") are lifted out of noun phrases and may
+   refine the verb: pushing something *open* is `OPEN`. A purpose clause
+   `USE X TO <verb> Y` becomes `<verb> Y WITH X`.
+5. **Resolution.** Noun phrases match visible items by exact alias, then by
+   shared group noun, then tolerantly: every query word appears in an alias,
+   or an alias appears wholly in the query and the leftovers are particles or
+   that item's adjectives. Then actors, then the current room's scenery nouns.
+   Things seen in visited rooms but not present are reported as known but
+   elsewhere; things never seen stay unknown.
+6. **Inference.** A verb with no object takes the one visible thing it applies
+   to (`UNLOCK` alone at the shed, `NESSA, CROSS` at the ledge) and says so
+   with `I read that as: ...`. That line appears only for genuine inferences.
+7. **Movement.** `GO` accepts a direction, `OUT`, `IN`, `BACK`, the name of an
+   adjacent room, or the thing an exit passes through (a door, gate, grate).
+   Going via a crossable thing is `CROSS`.
+8. **Affordance routing.** Generic handlers meet the player halfway: pushing or
+   forcing an openable thing tries to open it; opening a locked thing tries to
+   unlock it first; using a key on a lock unlocks; acting on a fitted part
+   (the handle in the winch) acts on its host; lighting or fitting something
+   still on the floor picks it up first.
+9. **Chains.** `THEN`, full stops, semicolons, and `AND` or commas split
+   commands where the next words start a new command; otherwise they form a
+   noun list. A failed step stops the rest of the chain.
+
+Typo suggestions are offered only for one-edit slips that keep the first
+letter, so unknown verbs are reported plainly rather than guessed at. The
+Harrow phrase corpus at `adventures/harrow_mine/tests/parser-corpus.json` is
+the acceptance set for these rules; grow it from playtests.
+
 ## World architecture recommendation
 
 The world engine should revolve around a small set of explicit concepts:
@@ -167,7 +212,7 @@ A good turn pipeline is:
 8. run any post-action scripted consequences  
 9. refresh UI
 
-That structure makes the project testable. It also makes Codex less likely to mix parsing, validation, and narration into one tangled function.
+That structure makes the project testable. It also makes a coding agent less likely to mix parsing, validation, and narration into one tangled function.
 
 ## Suggested code-level data shape
 
@@ -257,7 +302,7 @@ pipeline should work like this:
 5. downscale or palette-constrain them for crisp in-game use  
 6. store the prompt text and final asset reference in-repo
 
-OpenAI's image tooling supports both generation and iterative editing, and the GPT-5.4 frontend guidance explicitly recommends exploratory mood boards and multiple visual options before settling on final UI or visual direction.[^9][^10] That is a good fit here.
+Image-generation tooling supports both generation and iterative editing, and exploratory mood boards with multiple visual options before settling on a final visual direction remain the right workflow.[^9][^10]
 
 ### Art style constraints
 
@@ -305,9 +350,9 @@ Once the browser prototype is reliable, Tauri can wrap the same frontend for des
 
 ## Research notes
 
-[^1]: OpenAI, “Code generation” guide, recommending `gpt-5.4` as the default starting point for many coding tasks: <https://platform.openai.com/docs/guides/code>
+[^1]: Anthropic, Claude Code documentation on `CLAUDE.md` project memory: <https://docs.anthropic.com/en/docs/claude-code/memory>
 
-[^2]: OpenAI, “AGENTS.md” guide for Codex, on repository-local instructions that Codex reads before working: <https://developers.openai.com/codex/agents-md>
+[^2]: OpenAI, “AGENTS.md” guide, on repository-local instructions that coding agents read before working: <https://developers.openai.com/codex/agents-md>
 
 [^3]: Vite guide, Node version requirements: <https://vite.dev/guide/>
 
@@ -323,6 +368,6 @@ Once the browser prototype is reliable, Tauri can wrap the same frontend for des
 
 [^9]: OpenAI, “Image generation” guide: <https://platform.openai.com/docs/guides/image-generation>
 
-[^10]: OpenAI, “Designing delightful frontends with GPT-5.4”, especially the advice on mood boards, multiple directions, and iterative refinement: <https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4/>
+[^10]: OpenAI, “Designing delightful frontends”, on mood boards, multiple directions, and iterative refinement: <https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4/>
 
 [^11]: Inkle, “ink” documentation, describing it as a narrative scripting language for interactive scripts and branching dialogue: <https://www.inklestudios.com/ink/> and <https://github.com/inkle/ink/blob/master/Documentation/WritingWithInk.md>

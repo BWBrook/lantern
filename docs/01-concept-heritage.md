@@ -54,7 +54,7 @@ The vertical slice matters more than future plans. Twelve rooms, one objective, 
 
 ## Runtime AI policy
 
-All AI assistance belongs in development, not in play. Codex and GPT-5.4 may create code, content, art prompts, tests, and helper scripts ahead of time. The shipped prototype must run offline as an authored program with no live calls to a model API. Parser behavior, narrative text, and scene art references must be deterministic.
+All AI assistance belongs in development, not in play. A coding agent may create code, content, art prompts, tests, and helper scripts ahead of time. The shipped prototype must run offline as an authored program with no live calls to a model API. Parser behavior, narrative text, and scene art references must be deterministic.
 
 ## Writing tone
 

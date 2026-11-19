@@ -30,11 +30,11 @@ export const dictionary: AdventureDictionary = {
   actors: {
     bram: {
       aliases: ["bram", "bram pike", "fighter", "strong one"],
-      pronouns: ["him"]
+      pronouns: ["him", "he"]
     },
     nessa: {
       aliases: ["nessa", "nessa vale", "thief", "lockpick"],
-      pronouns: ["her"]
+      pronouns: ["her", "she"]
     }
   },
   items: {
@@ -45,7 +45,7 @@ export const dictionary: AdventureDictionary = {
     },
     beam: {
       aliases: ["beam", "fallen beam", "soaked beam", "timber beam"],
-      adjectives: ["fallen", "soaked", "timber"],
+      adjectives: ["fallen", "soaked", "timber", "heavy", "big"],
       nouns: ["beam", "obstacle"]
     },
     brass_key: {
@@ -72,12 +72,14 @@ export const dictionary: AdventureDictionary = {
         "entrance planks",
         "mine entrance",
         "mine mouth",
+        "mine",
         "planks",
         "rubble",
         "warped boards",
-        "warped planks"
+        "warped planks",
+        "way in"
       ],
-      adjectives: ["entrance", "mine", "warped"],
+      adjectives: ["entrance", "mine", "warped", "nailed", "old"],
       nouns: ["adit", "boards", "entrance", "mouth", "planks", "rubble"]
     },
     flooded_ledge: {
@@ -139,8 +141,8 @@ export const dictionary: AdventureDictionary = {
       nouns: ["ledger", "note", "papers"]
     },
     vent_grate: {
-      aliases: ["bars", "daylight grate", "exit grate", "grate", "latch", "rusted grate", "vent grate"],
-      adjectives: ["daylight", "exit", "rusted", "vent"],
+      aliases: ["bars", "daylight grate", "exit grate", "grate", "latch", "rusted grate", "vent grate", "way out"],
+      adjectives: ["daylight", "exit", "rusted", "vent", "iron", "old"],
       nouns: ["bars", "grate", "latch"]
     },
     winch: {
@@ -159,7 +161,7 @@ export const dictionary: AdventureDictionary = {
     key: ["brass_key"],
     lock: ["shed_door", "assay_door"]
   },
-  noiseWords: ["carefully", "just", "maybe", "quickly"],
+  noiseWords: ["maybe", "perhaps"],
   idioms: {
     "open way out": { verb: "OPEN", directObject: "grate", confidence: "likely" },
     "open the way out": { verb: "OPEN", directObject: "grate", confidence: "likely" },

@@ -171,6 +171,24 @@ export const hooks: AdventureHookRegistry = {
     );
   },
 
+  gate_refuse({ state }) {
+    if (hasFlag(state, "west_gate_open")) {
+      return result(state, "The gate already stands open. Whatever raised it is still holding.");
+    }
+
+    return result(
+      state,
+      "The gate is worked from somewhere else. There is no handle on this side, only chains running off into the dark and the sense of a mechanism waiting."
+    );
+  },
+
+  lockbox_refuse({ state }) {
+    return result(
+      state,
+      "The lockbox is locked, heavy, and not your problem to open here. The point is to be somewhere else with it. Nessa has already decided which somewhere."
+    );
+  },
+
   check_victory({ state, room }) {
     if (hasFlag(state, "victory")) {
       return result(state);

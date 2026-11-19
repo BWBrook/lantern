@@ -60,6 +60,7 @@ export function createInitialGameState(
   return {
     adventureId: adventure.metadata.id,
     currentRoomId: seed.currentRoomId,
+    previousRoomId: undefined,
     activeActorId: seed.activeActorId,
     inventory: seed.inventory ?? [],
     flags: seed.flags ?? [],
@@ -126,6 +127,7 @@ export function setItemLocation(
 export function setCurrentRoom(state: GameState, roomId: string): GameState {
   return {
     ...state,
+    previousRoomId: state.currentRoomId,
     currentRoomId: roomId,
     visitCounts: {
       ...state.visitCounts,

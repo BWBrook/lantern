@@ -1,4 +1,4 @@
-import { getItemById } from "../adventure";
+import { findActorById, findItemById, getSceneryByRef } from "../adventure";
 import type {
   AdventureDefinition,
   AtomicCommand,
@@ -7,7 +7,7 @@ import type {
   Intent,
   ResolvedIntent
 } from "../types";
-import { getCompiledDictionary, normalizeDictionaryPhrase } from "./dictionary";
+import { getCompiledDictionary, normalizeDictionaryPhrase, phraseTokens } from "./dictionary";
 import { ParserDiagnosticError } from "./diagnostics";
 import { normalizeTokens } from "./normalize";
 import { resolveIntent, resolveObjectId } from "./resolve";
@@ -20,24 +20,40 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
-function formatIntent(intent: ResolvedIntent): string {
+function describeObjectId(adventure: AdventureDefinition, id: string | undefined): string | undefined {
+  if (!id) {
+    return undefined;
+  }
+
+  return (
+    findItemById(adventure, id)?.name ??
+    findActorById(adventure, id)?.name ??
+    getSceneryByRef(adventure, id)?.nouns[0] ??
+    id.replace(/_/g, " ")
+  );
+}
+
+export function formatResolvedIntent(adventure: AdventureDefinition, intent: ResolvedIntent): string {
   return [
     intent.verb,
-    intent.directObjectId,
-    intent.preposition,
-    intent.indirectObjectId
+    describeObjectId(adventure, intent.directObjectId),
+    intent.indirectObjectId ? intent.preposition ?? "with" : undefined,
+    describeObjectId(adventure, intent.indirectObjectId)
   ]
     .filter(Boolean)
     .join(" ")
-    .replace(/_/g, " ")
     .toUpperCase();
 }
 
-function atomicFromResolved(source: string, intent: ResolvedIntent): AtomicCommand {
+function atomicFromResolved(
+  adventure: AdventureDefinition,
+  source: string,
+  intent: ResolvedIntent
+): AtomicCommand {
   return {
     confidence: intent.confidence ?? "exact",
     intent,
-    normalized: intent.normalized ?? formatIntent(intent),
+    normalized: formatResolvedIntent(adventure, intent),
     source
   };
 }
@@ -46,8 +62,12 @@ export function isParserMetaVerb(verb: CanonicalVerb): boolean {
   return META_VERBS.has(verb);
 }
 
-export function splitCommandChain(raw: string): string[] {
-  return raw
+// Break "take lamp and light it, then go north" into separate commands.
+// "and" or a comma splits only when the next words start a new command rather
+// than continuing a noun list ("take oil and handle") or addressing an actor.
+export function splitCommandChain(adventure: AdventureDefinition, raw: string): string[] {
+  const dictionary = getCompiledDictionary(adventure);
+  const coarse = raw
     .replace(/\s*,\s*then\s+/gi, "\n")
     .replace(/\s+and\s+then\s+/gi, "\n")
     .replace(/\s+then\s+/gi, "\n")
@@ -55,10 +75,54 @@ export function splitCommandChain(raw: string): string[] {
     .split(/\n+/)
     .map((part) => part.trim())
     .filter(Boolean);
-}
 
-function phraseTokens(phrase: string): string[] {
-  return normalizeDictionaryPhrase(phrase).split(" ").filter(Boolean);
+  const startsCommand = (segment: string): boolean => {
+    const tokens = phraseTokens(segment).filter((token) => !dictionary.stopWords.has(token));
+    const head = tokens[0];
+
+    if (!head) {
+      return false;
+    }
+
+    if (dictionary.itemAliasToIds.has(tokens.join(" ")) || dictionary.actorAliasToIds.has(tokens.join(" "))) {
+      return false;
+    }
+
+    if (dictionary.directionAliases.has(head)) {
+      return true;
+    }
+
+    if (!dictionary.verbAliases.has(head)) {
+      return false;
+    }
+
+    return tokens.length > 1 || !dictionary.itemAliasToIds.has(head);
+  };
+
+  const parts: string[] = [];
+
+  for (const segment of coarse) {
+    const pieces = segment.split(/\s+and\s+|\s*,\s*/i).map((piece) => piece.trim()).filter(Boolean);
+    let current = pieces[0] ?? "";
+
+    for (const piece of pieces.slice(1)) {
+      const currentIsActor = dictionary.actorAliasToIds.has(normalizeDictionaryPhrase(current));
+      const joiner = segment.includes(`${current} and ${piece}`) ? " and " : ", ";
+
+      if (!currentIsActor && startsCommand(piece)) {
+        parts.push(current);
+        current = piece;
+      } else {
+        current = `${current}${joiner}${piece}`;
+      }
+    }
+
+    if (current) {
+      parts.push(current);
+    }
+  }
+
+  return parts;
 }
 
 function phraseMatchesCandidate(candidatePhrase: string, query: string): boolean {
@@ -128,15 +192,11 @@ function buildResolvedIntent(
     resolved.confidence = intent.confidence;
   }
 
-  if (intent.normalized) {
-    resolved.normalized = intent.normalized;
-  }
-
   return resolved;
 }
 
 function parseExceptPhrase(phrase: string): { exceptPhrase: string | undefined; targetPhrase: string } {
-  const match = phrase.match(/^(all|everything)(?:\s+except\s+(.+))?$/);
+  const match = phrase.match(/^(all|everything)(?:\s+(?:except|but)\s+(.+))?$/);
 
   if (!match) {
     return { exceptPhrase: undefined, targetPhrase: phrase };
@@ -174,7 +234,7 @@ function expandBatchCommand(
 
   if (batchPhrase.exceptPhrase) {
     const exceptIds = splitNounList(batchPhrase.exceptPhrase).map((phrase) =>
-      resolveObjectId(adventure, state, phrase, false)
+      resolveObjectId(adventure, state, phrase)
     );
     targetIds = targetIds.filter((itemId) => !exceptIds.includes(itemId));
   }
@@ -186,19 +246,7 @@ function expandBatchCommand(
   }
 
   return targetIds.map((itemId) =>
-    atomicFromResolved(
-      source,
-      buildResolvedIntent(
-        source,
-        {
-          ...intent,
-          normalized: `${intent.verb} ${getItemById(adventure, itemId).name}`.toUpperCase()
-        },
-        actorId,
-        itemId,
-        undefined
-      )
-    )
+    atomicFromResolved(adventure, source, buildResolvedIntent(source, intent, actorId, itemId, undefined))
   );
 }
 
@@ -221,21 +269,12 @@ function expandNounList(
   const actorId = intent.actorId ?? state.activeActorId;
 
   return parts.map((part) => {
-    const itemId = resolveObjectId(adventure, state, part, false);
+    const itemId = resolveObjectId(adventure, state, part);
 
     return atomicFromResolved(
+      adventure,
       source,
-      buildResolvedIntent(
-        source,
-        {
-          ...intent,
-          directObject: part,
-          normalized: `${intent.verb} ${part}`.toUpperCase()
-        },
-        actorId,
-        itemId,
-        undefined
-      )
+      buildResolvedIntent(source, { ...intent, directObject: part }, actorId, itemId, undefined)
     );
   });
 }
@@ -267,30 +306,21 @@ function resolveClarification(
   const directObjectId =
     pending.objectRole === "directObject"
       ? matches[0]
-      : resolveObjectId(adventure, state, pending.intent.directObject, false);
+      : resolveObjectId(adventure, state, pending.intent.directObject);
   const indirectObjectId =
     pending.objectRole === "indirectObject"
       ? matches[0]
-      : resolveObjectId(adventure, state, pending.intent.indirectObject, false);
+      : resolveObjectId(adventure, state, pending.intent.indirectObject, { allowScenery: false });
 
   const resolved = buildResolvedIntent(
     source,
-    {
-      ...pending.intent,
-      confidence: "likely",
-      normalized:
-        pending.intent.normalized ??
-        [pending.intent.verb, pending.intent.directObject, pending.intent.preposition, pending.intent.indirectObject]
-          .filter(Boolean)
-          .join(" ")
-          .toUpperCase()
-    },
+    { ...pending.intent, confidence: "likely" },
     actorId,
     directObjectId,
     indirectObjectId
   );
 
-  return [atomicFromResolved(source, resolved)];
+  return [atomicFromResolved(adventure, source, resolved)];
 }
 
 function isAgain(source: string): boolean {
@@ -308,7 +338,7 @@ export function parseAtomicCommands(
     }
 
     return [
-      atomicFromResolved(source, {
+      atomicFromResolved(adventure, source, {
         ...state.parser.lastIntent,
         raw: source
       })
@@ -337,7 +367,7 @@ export function parseAtomicCommands(
       return listCommands;
     }
 
-    return [atomicFromResolved(source, resolveIntent(adventure, state, intent))];
+    return [atomicFromResolved(adventure, source, resolveIntent(adventure, state, intent))];
   } catch (error) {
     if (error instanceof ParserDiagnosticError && error.diagnostic.code === "ambiguous_noun") {
       throw new ParserDiagnosticError(

@@ -111,9 +111,15 @@ describe("parser v2", () => {
     );
   });
 
-  it("reports offstage known objects as not visible", () => {
-    expect(() => resolve("EXAMINE LOCKBOX")).toThrowError(
-      "You know about paymaster's lockbox, but you cannot see it here."
+  it("reports offstage objects as not visible only once they have been seen", () => {
+    expect(() => resolve("EXAMINE LOCKBOX")).toThrowError("You cannot see any lockbox here.");
+
+    let state = createInitialGameState(harrowMineAdventure);
+    state = setCurrentRoom(state, "foreman_shed");
+    state = setCurrentRoom(state, "loading_yard");
+
+    expect(() => resolve("EXAMINE LAMP", state)).toThrowError(
+      "You know about the brass lamp, but it is not here."
     );
   });
 });
@@ -210,16 +216,22 @@ describe("parser v3", () => {
     result = runTurn(tinyAdventure, state, "oak", undefined);
 
     expect(result.messages).toEqual([
-      "I read that as: EXAMINE DOOR.",
-      "A plain oak door with a brass latch."
+      "I read that as: EXAMINE OAK DOOR.",
+      "A plain oak door with a brass latch. It is closed."
     ]);
   });
 
-  it("shows likely-parse normalization when acting on natural directed phrasing", () => {
+  it("treats ordinary directed phrasing as exact, without a disclosure line", () => {
     const state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "loading_yard");
     const result = runTurn(harrowMineAdventure, state, "have Nessa pick lock", undefined);
 
-    expect(result.messages[0]).toBe("I read that as: UNLOCK LOCK.");
-    expect(result.messages.join("\n")).toContain("The hasp clicks.");
+    expect(result.messages[0]).toContain("The hasp clicks.");
+  });
+
+  it("discloses only genuine inferences, naming the resolved object", () => {
+    const state = setCurrentRoom(createInitialGameState(harrowMineAdventure), "flooded_drift");
+    const result = runTurn(harrowMineAdventure, state, "nessa, cross", undefined);
+
+    expect(result.messages[0]).toBe("I read that as: CROSS NARROW LEDGE.");
   });
 });

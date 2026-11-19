@@ -96,7 +96,7 @@ The implementation should converge toward something close to this shape:
 │     │  └─ rooms/
 │     └─ tests/
 │        ├─ golden-path.txt
-│        └─ parser-v3-corpus.json
+│        └─ parser-corpus.json
 ├─ src/
 │  ├─ main.ts
 │  ├─ app/

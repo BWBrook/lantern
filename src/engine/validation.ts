@@ -191,12 +191,30 @@ export function validateAdventureBundle(
       });
     }
 
+    for (const [index, scenery] of (room.scenery ?? []).entries()) {
+      if (scenery.nouns.length === 0 || scenery.nouns.some((noun) => !noun.trim())) {
+        issues.push({
+          scope: "room",
+          id: room.id,
+          message: `Room "${room.id}" scenery entry ${index} has an empty noun.`
+        });
+      }
+    }
+
     for (const exit of room.exits) {
       if (!roomIds.has(exit.targetRoomId)) {
         issues.push({
           scope: "room",
           id: room.id,
           message: `Room "${room.id}" has exit to unknown room "${exit.targetRoomId}".`
+        });
+      }
+
+      if (exit.viaItemId && !itemIds.has(exit.viaItemId)) {
+        issues.push({
+          scope: "item",
+          id: exit.viaItemId,
+          message: `Exit from room "${room.id}" references unknown via item "${exit.viaItemId}".`
         });
       }
 
